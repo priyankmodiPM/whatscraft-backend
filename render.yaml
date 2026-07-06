@@ -14,3 +14,5 @@ services:
         sync: false
       - key: WHATSAPP_TOKEN
         sync: false
+      - key: OPENAI_API_KEY
+        sync: false
