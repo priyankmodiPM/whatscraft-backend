@@ -8,8 +8,10 @@ const port = process.env.PORT || 3000;
 const verifyToken = process.env.VERIFY_TOKEN;
 const whatsappPhoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
 const whatsappToken = process.env.WHATSAPP_TOKEN;
+const openaiBaseURL = process.env.OPENAI_BASE_URL || undefined;
+const openaiModel = process.env.OPENAI_MODEL || 'gpt-4o';
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY, baseURL: openaiBaseURL });
 
 // In-memory conversation history per phone number (last 20 messages kept)
 const conversationHistory = new Map();
@@ -157,8 +159,12 @@ If the request is ambiguous or missing details, use ask_for_more_information.`,
     { role: 'user', content: userMessage },
   ];
 
+  console.log(
+    `[decideAction] calling chat.completions.create — model: ${openaiModel}, baseURL: ${openai.baseURL}, phone: ${phoneNumber}`
+  );
+
   const response = await openai.chat.completions.create({
-    model: 'gpt-4o',
+    model: openaiModel,
     messages,
     tools,
     tool_choice: 'required',
@@ -242,10 +248,22 @@ app.post('/', async (req, res) => {
       appendHistory(phoneNumber, 'assistant', replyText);
     }
   } catch (err) {
-    console.error('Error handling message:', err.message);
+    console.error('Error handling message:', {
+      message: err.message,
+      status: err.status,
+      code: err.code,
+      type: err.type,
+      requestID: err.requestID,
+      error: err.error,
+      model: openaiModel,
+      baseURL: openai.baseURL,
+    });
   }
 });
 
 app.listen(port, () => {
   console.log(`\nListening on port ${port}\n`);
+  console.log(`[startup] OPENAI_BASE_URL: ${process.env.OPENAI_BASE_URL ?? '(unset, defaults to api.openai.com)'}`);
+  console.log(`[startup] OPENAI_MODEL: ${openaiModel}`);
+  console.log(`[startup] OPENAI_API_KEY set: ${Boolean(process.env.OPENAI_API_KEY)}`);
 });
