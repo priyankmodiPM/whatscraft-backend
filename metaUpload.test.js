@@ -12,3 +12,8 @@ test('uploadImageToMeta returns a different url on each call', async () => {
   const second = await uploadImageToMeta('https://mock-express.local/render/tpl_diwali?rev=2');
   assert.notEqual(first, second);
 });
+
+test('uploadImageToMeta passes through urls that are already publicly hosted', async () => {
+  const url = await uploadImageToMeta('https://s7ap1.scene7.com/is/image/varun/croma1-earbuds-updated');
+  assert.equal(url, 'https://s7ap1.scene7.com/is/image/varun/croma1-earbuds-updated');
+});

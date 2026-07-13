@@ -32,3 +32,8 @@ test('applyEdit returns a rendered image url that references the template', () =
   const result = applyEdit('tpl_summer', {}, { headline: 'Flash Sale' });
   assert.match(result.renderedImageUrl, /^https:\/\/mock-express\.local\/render\/tpl_summer\?rev=\d+$/);
 });
+
+test('applyEdit returns the fixed updated Croma earbuds image for any edit', () => {
+  const result = applyEdit('tpl_croma_earbuds', {}, { Price: '999' });
+  assert.equal(result.renderedImageUrl, 'https://s7ap1.scene7.com/is/image/varun/croma1-earbuds-updated');
+});

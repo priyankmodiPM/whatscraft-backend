@@ -35,6 +35,19 @@ test('actionEditGraphic rejects edits outside the unlocked layers and sends noth
   assert.equal(sendImageCalled, false);
 });
 
+test('actionEditGraphic sends the fixed updated Croma earbuds image for any allowed edit', async () => {
+  const sentCalls = [];
+  const sendImage = async (to, link) => {
+    sentCalls.push({ to, link });
+  };
+
+  const reply = await actionEditGraphic('phone-5', 'img_3', { Price: '999' }, { sendImage });
+
+  assert.match(reply, /Updated "Croma Earbuds"/);
+  assert.equal(sentCalls.length, 1);
+  assert.equal(sentCalls[0].link, 'https://s7ap1.scene7.com/is/image/varun/croma1-earbuds-updated');
+});
+
 test('actionEditGraphic applies an allowed edit, sends the updated image, and remembers the edit', async () => {
   const sentCalls = [];
   const sendImage = async (to, link) => {
