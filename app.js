@@ -1,5 +1,12 @@
 const express = require('express');
 const OpenAI = require('openai');
+const { getTrackedImages } = require('./imageStore');
+const {
+  actionListCampaignGraphics,
+  actionCheckAllowedEdits,
+  actionEditGraphic,
+  actionGenerateBulkGraphics,
+} = require('./actions');
 
 const app = express();
 app.use(express.json());
@@ -83,24 +90,33 @@ const tools = [
     type: 'function',
     function: {
       name: 'check_allowed_edits',
-      description: 'Check what edits are permitted on the current graphic',
-      parameters: { type: 'object', properties: {} },
+      description:
+        'Check what edits are permitted on a specific graphic. Pick image_id from the "Images previously sent to this user" list in the system prompt that best matches what the user is referring to.',
+      parameters: {
+        type: 'object',
+        properties: {
+          image_id: { type: 'string', description: 'The id of the image the user is asking about, from the tracked images list' },
+        },
+        required: ['image_id'],
+      },
     },
   },
   {
     type: 'function',
     function: {
       name: 'edit_graphic',
-      description: 'Edit the current graphic via Adobe Express API (e.g. change discount text, colors)',
+      description:
+        'Edit a specific graphic via Adobe Express API (e.g. change discount text, colors). Pick image_id from the "Images previously sent to this user" list in the system prompt that best matches what the user is referring to.',
       parameters: {
         type: 'object',
         properties: {
+          image_id: { type: 'string', description: 'The id of the image to edit, from the tracked images list' },
           edits: {
             type: 'object',
             description: 'Key-value pairs of edits to apply, e.g. { "discount_text": "70%" }',
           },
         },
-        required: ['edits'],
+        required: ['image_id', 'edits'],
       },
     },
   },
@@ -119,33 +135,12 @@ const tools = [
   },
 ];
 
-// ── Action handlers (stubs — wire real APIs here) ────────────────────────────
-
-async function actionListCampaignGraphics() {
-  // TODO: fetch from campaign API
-  return 'Graphics in your current campaign:\n1. Diwali Offer Banner\n2. Summer Sale Flyer\n3. New Arrival Poster';
-}
-
-async function actionCheckAllowedEdits() {
-  // TODO: fetch from Adobe Express API
-  return 'Edits allowed on the current graphic:\n- Discount percentage\n- Headline text\n- Background color\n- Font color';
-}
-
-async function actionEditGraphic(edits) {
-  // TODO: call Adobe Express API
-  const summary = Object.entries(edits).map(([k, v]) => `• ${k}: ${v}`).join('\n');
-  return `Graphic updated successfully:\n${summary}`;
-}
-
-async function actionGenerateBulkGraphics(filename) {
-  // TODO: parse CSV/Excel and call Adobe Express API per row
-  return `Bulk generation complete! Graphics created from ${filename || 'your uploaded file'}.`;
-}
-
 // ── GPT decision engine ──────────────────────────────────────────────────────
 
 async function decideAction(phoneNumber, userMessage) {
   const last3 = getHistory(phoneNumber).slice(-3);
+  const trackedImages = getTrackedImages(phoneNumber);
+  const imagesList = trackedImages.map((image) => `- ${image.id}: ${image.name}`).join('\n');
 
   const messages = [
     {
@@ -153,7 +148,10 @@ async function decideAction(phoneNumber, userMessage) {
       content: `You are a WhatsApp assistant for managing marketing campaign graphics via Adobe Express.
 Analyze the user's message and conversation history, then call the appropriate tool.
 Always call exactly one tool — never reply with plain text.
-If the request is ambiguous or missing details, use ask_for_more_information.`,
+If the request is ambiguous or missing details, use ask_for_more_information.
+
+Images previously sent to this user (reference by id):
+${imagesList}`,
     },
     ...last3,
     { role: 'user', content: userMessage },
@@ -227,12 +225,12 @@ app.post('/', async (req, res) => {
 
         case 'check_allowed_edits':
           await sendText(phoneNumber, '⏳ Checking allowed edits...');
-          replyText = await actionCheckAllowedEdits();
+          replyText = await actionCheckAllowedEdits(phoneNumber, args.image_id);
           break;
 
         case 'edit_graphic':
           await sendText(phoneNumber, '⏳ Applying edits to your graphic...');
-          replyText = await actionEditGraphic(args.edits);
+          replyText = await actionEditGraphic(phoneNumber, args.image_id, args.edits, { sendImage });
           break;
 
         case 'generate_bulk_graphics':
