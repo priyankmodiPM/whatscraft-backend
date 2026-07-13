@@ -10,7 +10,7 @@ function formatUnknownImageMessage(phoneNumber) {
 
 async function actionListCampaignGraphics() {
   // TODO: fetch from campaign API
-  return 'Graphics in your current campaign:\n1. Diwali Offer Banner\n2. Summer Sale Flyer\n3. New Arrival Poster';
+  return 'Graphics in your current campaign:\n1. Diwali Offer Banner\n2. Summer Sale Flyer\n3. Croma Earbuds';
 }
 
 async function actionCheckAllowedEdits(phoneNumber, imageId) {

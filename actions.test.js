@@ -9,6 +9,15 @@ test('actionCheckAllowedEdits lists the unlocked layers for a known image', asyn
   assert.match(reply, /discount_text/);
 });
 
+test('actionCheckAllowedEdits lists Price, Address, Product Image, Partner Logo for the Croma earbuds image', async () => {
+  const reply = await actionCheckAllowedEdits('phone-croma', 'img_3');
+  assert.match(reply, /Croma Earbuds/);
+  assert.match(reply, /- Price/);
+  assert.match(reply, /- Address/);
+  assert.match(reply, /- Product Image/);
+  assert.match(reply, /- Partner Logo/);
+});
+
 test('actionCheckAllowedEdits reports unknown images without throwing', async () => {
   const reply = await actionCheckAllowedEdits('phone-2', 'img_nope');
   assert.match(reply, /couldn't find that image/);

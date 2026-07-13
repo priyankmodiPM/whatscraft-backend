@@ -1,7 +1,12 @@
 const SEED_IMAGES = [
   { id: 'img_1', name: 'Diwali Offer Banner', templateId: 'tpl_diwali' },
   { id: 'img_2', name: 'Summer Sale Flyer', templateId: 'tpl_summer' },
-  { id: 'img_3', name: 'New Arrival Poster', templateId: 'tpl_newarrival' },
+  {
+    id: 'img_3',
+    name: 'Croma Earbuds',
+    templateId: 'tpl_croma_earbuds',
+    url: 'https://s7ap1.scene7.com/is/image/varun/croma1-earbuds',
+  },
 ];
 
 const trackedImages = new Map();

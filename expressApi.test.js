@@ -10,6 +10,14 @@ test('getTemplateInfo returns the unlocked layers for a known template', () => {
   });
 });
 
+test('getTemplateInfo returns the unlocked layers for the Croma earbuds template', () => {
+  const info = getTemplateInfo('tpl_croma_earbuds');
+  assert.deepEqual(info, {
+    templateId: 'tpl_croma_earbuds',
+    unlockedLayers: ['Price', 'Address', 'Product Image', 'Partner Logo'],
+  });
+});
+
 test('getTemplateInfo returns an empty layer list for an unknown template', () => {
   const info = getTemplateInfo('tpl_does_not_exist');
   assert.deepEqual(info.unlockedLayers, []);

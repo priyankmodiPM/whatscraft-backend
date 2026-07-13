@@ -1,7 +1,7 @@
 const TEMPLATE_LAYERS = {
   tpl_diwali: ['discount_text', 'headline', 'background_color'],
   tpl_summer: ['headline', 'font_color'],
-  tpl_newarrival: ['headline'],
+  tpl_croma_earbuds: ['Price', 'Address', 'Product Image', 'Partner Logo'],
 };
 
 function getTemplateInfo(templateId) {
