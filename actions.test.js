@@ -5,7 +5,7 @@ const path = require('node:path');
 const os = require('node:os');
 const { actionCheckAllowedEdits, actionEditGraphic } = require('./actions');
 const expressApi = require('./expressApi');
-const { findTrackedImage } = require('./imageStore');
+const { findTrackedImage, recordEdits } = require('./imageStore');
 
 function writeFixtureCatalog(entries) {
   const fixturePath = path.join(os.tmpdir(), `express-templates-${Date.now()}-${Math.random().toString(36).slice(2)}.json`);
@@ -37,6 +37,18 @@ test('actionCheckAllowedEdits lists the tagged elements for a known image', asyn
   assert.match(reply, /Croma Earbuds/);
   assert.match(reply, /heading: currently "The X-Phone Pro is here!"/);
   assert.match(reply, /cta: currently/);
+});
+
+test('actionCheckAllowedEdits shows the latest edited value instead of the stale original document value', async () => {
+  writeFixtureCatalog([{ id: 'img_1', name: 'Croma Earbuds', docId: 'urn:doc:1' }]);
+  expressApi.getTaggedDocument = async () => SAMPLE_ELEMENTS_DOC;
+  recordEdits('phone-1b', 'img_1', { cta: '20% off' });
+
+  const reply = await actionCheckAllowedEdits('phone-1b', 'img_1');
+
+  assert.match(reply, /cta: currently "20% off"/);
+  assert.doesNotMatch(reply, /Available at our store starting 15 Aug 20XX\./);
+  assert.match(reply, /heading: currently "The X-Phone Pro is here!"/);
 });
 
 test('actionCheckAllowedEdits reports unknown images without throwing', async () => {
@@ -83,8 +95,8 @@ test('actionEditGraphic applies an allowed edit end-to-end: generates, polls, se
     assert.match(preferredDocumentName, /^Croma Earbuds-edit-\d+$/);
     return { jobId: 'job-1', statusUrl: 'https://express-api.adobe.io/status/job-1' };
   };
-  expressApi.pollJobStatus = async (jobId) => {
-    assert.equal(jobId, 'job-1');
+  expressApi.pollJobStatus = async (statusUrl) => {
+    assert.equal(statusUrl, 'https://express-api.adobe.io/status/job-1');
     return { status: 'succeeded', document: { thumbnailUrl: 'https://example.com/thumb.png' } };
   };
 
@@ -117,4 +129,21 @@ test('actionEditGraphic returns a friendly message and does not record the edit 
 
   const image = findTrackedImage('phone-6', 'img_1');
   assert.deepEqual(image.currentEdits, {});
+});
+
+test('actionEditGraphic tells the user delivery failed but keeps the recorded edit when sendImage throws', async () => {
+  writeFixtureCatalog([{ id: 'img_1', name: 'Croma Earbuds', docId: 'urn:doc:1' }]);
+  expressApi.getTaggedDocument = async () => SAMPLE_ELEMENTS_DOC;
+  expressApi.generateVariation = async () => ({ jobId: 'job-1', statusUrl: 'https://express-api.adobe.io/status/job-1' });
+  expressApi.pollJobStatus = async () => ({ status: 'succeeded', document: { thumbnailUrl: 'https://example.com/thumb.png' } });
+
+  const sendImage = async () => { throw new Error('WhatsApp could not fetch the link'); };
+
+  const reply = await actionEditGraphic('phone-7', 'img_1', { cta: '20% off' }, { sendImage });
+
+  assert.match(reply, /couldn't send the image right now/);
+  assert.doesNotMatch(reply, /something went wrong generating/);
+
+  const image = findTrackedImage('phone-7', 'img_1');
+  assert.deepEqual(image.currentEdits, { cta: '20% off' });
 });

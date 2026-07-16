@@ -35,9 +35,9 @@ async function generateVariation(docId, tagMappings, pages, preferredDocumentNam
   return response.json();
 }
 
-async function getJobStatus(jobId) {
+async function getJobStatus(statusUrl) {
   const headers = await buildAuthHeaders();
-  const response = await fetch(`${apiBaseUrl()}/status/${encodeURIComponent(jobId)}`, { headers });
+  const response = await fetch(statusUrl, { headers });
   if (!response.ok) {
     const text = await response.text();
     throw new Error(`getJobStatus failed ${response.status}: ${text}`);
@@ -45,16 +45,16 @@ async function getJobStatus(jobId) {
   return response.json();
 }
 
-async function pollJobStatus(jobId, { intervalMs, timeoutMs } = {}) {
+async function pollJobStatus(statusUrl, { intervalMs, timeoutMs } = {}) {
   const interval = intervalMs ?? Number(process.env.EXPRESS_STATUS_POLL_INTERVAL_MS || 2000);
   const timeout = timeoutMs ?? Number(process.env.EXPRESS_STATUS_POLL_TIMEOUT_MS || 60000);
   const deadline = Date.now() + timeout;
 
   for (;;) {
-    const result = await getJobStatus(jobId);
+    const result = await getJobStatus(statusUrl);
     if (result.status === 'succeeded') return result;
-    if (result.status === 'failed') throw new Error(`Express job ${jobId} failed`);
-    if (Date.now() >= deadline) throw new Error(`Express job ${jobId} timed out after ${timeout}ms`);
+    if (result.status === 'failed') throw new Error(`Express job at ${statusUrl} failed`);
+    if (Date.now() >= deadline) throw new Error(`Express job at ${statusUrl} timed out after ${timeout}ms`);
     await sleep(interval);
   }
 }

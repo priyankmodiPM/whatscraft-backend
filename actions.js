@@ -9,7 +9,13 @@ function formatUnknownImageMessage(phoneNumber) {
 
 async function actionListCampaignGraphics() {
   // TODO: fetch from campaign API
-  return 'Graphics in your current campaign:\n1. Diwali Offer Banner\n2. Summer Sale Flyer\n3. Croma Earbuds';
+  return 'Graphics in your current campaign:\n1. Croma Earbuds';
+}
+
+function withCurrentEdits(elements, currentEdits) {
+  return elements.map((element) =>
+    element.name in currentEdits ? { ...element, value: currentEdits[element.name] } : element
+  );
 }
 
 async function actionCheckAllowedEdits(phoneNumber, imageId) {
@@ -21,7 +27,8 @@ async function actionCheckAllowedEdits(phoneNumber, imageId) {
   try {
     const doc = await expressApi.getTaggedDocument(image.docId);
     const elements = expressApi.collectTaggedElements(doc);
-    return expressApi.formatAllowedEdits(image.name, elements);
+    const elementsWithCurrentEdits = withCurrentEdits(elements, image.currentEdits);
+    return expressApi.formatAllowedEdits(image.name, elementsWithCurrentEdits);
   } catch (err) {
     console.error('[actionCheckAllowedEdits] Express API error', { docId: image.docId, message: err.message });
     return `Sorry, I couldn't check the allowed edits for "${image.name}" right now. Please try again in a moment.`;
@@ -48,7 +55,8 @@ async function actionEditGraphic(phoneNumber, imageId, edits, { sendImage }) {
   const disallowedKeys = requestedKeys.filter((key) => !allowedNames.includes(key));
 
   if (disallowedKeys.length > 0) {
-    return `I can't edit ${disallowedKeys.join(', ')} on "${image.name}". ${expressApi.formatAllowedEdits(image.name, elements)}`;
+    const elementsWithCurrentEdits = withCurrentEdits(elements, image.currentEdits);
+    return `I can't edit ${disallowedKeys.join(', ')} on "${image.name}". ${expressApi.formatAllowedEdits(image.name, elementsWithCurrentEdits)}`;
   }
 
   const mergedEdits = { ...image.currentEdits, ...edits };
@@ -57,8 +65,8 @@ async function actionEditGraphic(phoneNumber, imageId, edits, { sendImage }) {
 
   let thumbnailUrl;
   try {
-    const { jobId } = await expressApi.generateVariation(image.docId, mergedEdits, pages, preferredDocumentName);
-    const result = await expressApi.pollJobStatus(jobId);
+    const { statusUrl } = await expressApi.generateVariation(image.docId, mergedEdits, pages, preferredDocumentName);
+    const result = await expressApi.pollJobStatus(statusUrl);
     thumbnailUrl = result.document.thumbnailUrl;
   } catch (err) {
     console.error('[actionEditGraphic] generate/poll error', { docId: image.docId, message: err.message });
@@ -66,9 +74,16 @@ async function actionEditGraphic(phoneNumber, imageId, edits, { sendImage }) {
   }
 
   recordEdits(phoneNumber, imageId, edits);
-  await sendImage(phoneNumber, thumbnailUrl);
 
   const summary = Object.entries(edits).map(([key, value]) => `• ${key}: ${value}`).join('\n');
+
+  try {
+    await sendImage(phoneNumber, thumbnailUrl);
+  } catch (err) {
+    console.error('[actionEditGraphic] sendImage error', { docId: image.docId, message: err.message });
+    return `Updated "${image.name}", but I couldn't send the image right now — try asking me to resend it.`;
+  }
+
   return `Updated "${image.name}":\n${summary}`;
 }
 

@@ -79,17 +79,21 @@ test('generateVariation posts the right body and returns jobId/statusUrl', async
   global.fetch = originalFetch;
 });
 
-test('getJobStatus returns the parsed status response', async () => {
+test('getJobStatus fetches the exact statusUrl provided, with no reconstruction', async () => {
   process.env.EXPRESS_CLIENT_ID = 'client-1';
   process.env.EXPRESS_CLIENT_SECRET = 'secret-1';
+  const statusUrl = 'https://express-api.adobe.io/status/job-1';
   stubFetch([
-    [/\/status\//, async () => ({
-      ok: true,
-      json: async () => ({ jobId: 'job-1', status: 'succeeded', document: { name: 'GD2.express', id: 'urn:doc:2', thumbnailUrl: 'https://example.com/thumb.png' } }),
-    })],
+    [/\/status\/job-1$/, async (url) => {
+      assert.equal(url, statusUrl);
+      return {
+        ok: true,
+        json: async () => ({ jobId: 'job-1', status: 'succeeded', document: { name: 'GD2.express', id: 'urn:doc:2', thumbnailUrl: 'https://example.com/thumb.png' } }),
+      };
+    }],
   ]);
 
-  const result = await getJobStatus('job-1');
+  const result = await getJobStatus(statusUrl);
 
   assert.equal(result.status, 'succeeded');
   assert.equal(result.document.thumbnailUrl, 'https://example.com/thumb.png');
@@ -99,9 +103,11 @@ test('getJobStatus returns the parsed status response', async () => {
 test('pollJobStatus resolves once status is succeeded', async () => {
   process.env.EXPRESS_CLIENT_ID = 'client-1';
   process.env.EXPRESS_CLIENT_SECRET = 'secret-1';
+  const statusUrl = 'https://express-api.adobe.io/status/job-2';
   let calls = 0;
   stubFetch([
-    [/\/status\//, async () => {
+    [/\/status\/job-2$/, async (url) => {
+      assert.equal(url, statusUrl);
       calls += 1;
       const status = calls < 2 ? 'running' : 'succeeded';
       return {
@@ -115,7 +121,7 @@ test('pollJobStatus resolves once status is succeeded', async () => {
     }],
   ]);
 
-  const result = await pollJobStatus('job-2', { intervalMs: 1, timeoutMs: 1000 });
+  const result = await pollJobStatus(statusUrl, { intervalMs: 1, timeoutMs: 1000 });
 
   assert.equal(result.status, 'succeeded');
   assert.equal(calls, 2);
@@ -125,22 +131,30 @@ test('pollJobStatus resolves once status is succeeded', async () => {
 test('pollJobStatus throws when status is failed', async () => {
   process.env.EXPRESS_CLIENT_ID = 'client-1';
   process.env.EXPRESS_CLIENT_SECRET = 'secret-1';
+  const statusUrl = 'https://express-api.adobe.io/status/job-3';
   stubFetch([
-    [/\/status\//, async () => ({ ok: true, json: async () => ({ jobId: 'job-3', status: 'failed' }) })],
+    [/\/status\/job-3$/, async () => ({ ok: true, json: async () => ({ jobId: 'job-3', status: 'failed' }) })],
   ]);
 
-  await assert.rejects(() => pollJobStatus('job-3', { intervalMs: 1, timeoutMs: 1000 }), /failed/);
+  await assert.rejects(
+    () => pollJobStatus(statusUrl, { intervalMs: 1, timeoutMs: 1000 }),
+    (err) => err.message === `Express job at ${statusUrl} failed`
+  );
   global.fetch = originalFetch;
 });
 
 test('pollJobStatus throws once the timeout elapses without succeeding', async () => {
   process.env.EXPRESS_CLIENT_ID = 'client-1';
   process.env.EXPRESS_CLIENT_SECRET = 'secret-1';
+  const statusUrl = 'https://express-api.adobe.io/status/job-4';
   stubFetch([
-    [/\/status\//, async () => ({ ok: true, json: async () => ({ jobId: 'job-4', status: 'running' }) })],
+    [/\/status\/job-4$/, async () => ({ ok: true, json: async () => ({ jobId: 'job-4', status: 'running' }) })],
   ]);
 
-  await assert.rejects(() => pollJobStatus('job-4', { intervalMs: 5, timeoutMs: 20 }), /timed out/);
+  await assert.rejects(
+    () => pollJobStatus(statusUrl, { intervalMs: 5, timeoutMs: 20 }),
+    (err) => /timed out/.test(err.message) && err.message.includes(statusUrl)
+  );
   global.fetch = originalFetch;
 });
 
