@@ -1,39 +1,190 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { getTemplateInfo, applyEdit } = require('./expressApi');
+const {
+  getTaggedDocument,
+  generateVariation,
+  getJobStatus,
+  pollJobStatus,
+  collectTaggedElements,
+  formatAllowedEdits,
+  pagesForEdits,
+  buildPreferredDocumentName,
+} = require('./expressApi');
 
-test('getTemplateInfo returns the unlocked layers for a known template', () => {
-  const info = getTemplateInfo('tpl_diwali');
-  assert.deepEqual(info, {
-    templateId: 'tpl_diwali',
-    unlockedLayers: ['discount_text', 'headline', 'background_color'],
-  });
+const originalFetch = global.fetch;
+
+function stubFetch(handlers) {
+  global.fetch = async (url, options) => {
+    if (url.includes('ims-na1.adobelogin.com')) {
+      return { ok: true, json: async () => ({ access_token: 'tok-test', expires_in: 86400000 }) };
+    }
+    for (const [pattern, handler] of handlers) {
+      if (pattern.test(url)) return handler(url, options);
+    }
+    throw new Error(`Unexpected fetch call: ${url}`);
+  };
+}
+
+test('getTaggedDocument fetches and returns the tagged document', async () => {
+  process.env.EXPRESS_CLIENT_ID = 'client-1';
+  process.env.EXPRESS_CLIENT_SECRET = 'secret-1';
+  stubFetch([
+    [/\/beta\/tagged-documents\//, async (url, options) => {
+      assert.match(url, /\/beta\/tagged-documents\/urn%3Aaaid%3Asc%3AAP%3Aabc$/);
+      assert.equal(options.headers.Authorization, 'Bearer tok-test');
+      assert.equal(options.headers['X-API-KEY'], 'client-1');
+      return { ok: true, json: async () => ({ name: 'Croma2-Doc', id: 'urn:aaid:sc:AP:abc', documentPages: [] }) };
+    }],
+  ]);
+
+  const doc = await getTaggedDocument('urn:aaid:sc:AP:abc');
+
+  assert.equal(doc.name, 'Croma2-Doc');
+  global.fetch = originalFetch;
 });
 
-test('getTemplateInfo returns the unlocked layers for the Croma earbuds template', () => {
-  const info = getTemplateInfo('tpl_croma_earbuds');
-  assert.deepEqual(info, {
-    templateId: 'tpl_croma_earbuds',
-    unlockedLayers: ['Price', 'Address', 'Product Image', 'Partner Logo'],
-  });
+test('getTaggedDocument throws with the status and body on a non-ok response', async () => {
+  process.env.EXPRESS_CLIENT_ID = 'client-1';
+  process.env.EXPRESS_CLIENT_SECRET = 'secret-1';
+  stubFetch([
+    [/\/beta\/tagged-documents\//, async () => ({ ok: false, status: 404, text: async () => 'not found' })],
+  ]);
+
+  await assert.rejects(() => getTaggedDocument('urn:missing'), /404/);
+  global.fetch = originalFetch;
 });
 
-test('getTemplateInfo returns an empty layer list for an unknown template', () => {
-  const info = getTemplateInfo('tpl_does_not_exist');
-  assert.deepEqual(info.unlockedLayers, []);
+test('generateVariation posts the right body and returns jobId/statusUrl', async () => {
+  process.env.EXPRESS_CLIENT_ID = 'client-1';
+  process.env.EXPRESS_CLIENT_SECRET = 'secret-1';
+  stubFetch([
+    [/\/beta\/generate-variation$/, async (url, options) => {
+      assert.equal(options.method, 'POST');
+      const body = JSON.parse(options.body);
+      assert.deepEqual(body, {
+        id: 'urn:doc:1',
+        variationDetails: {
+          pages: '1',
+          preferredDocumentName: 'Croma Earbuds-edit-123',
+          tagMappings: { cta: '20% off' },
+        },
+      });
+      return { ok: true, json: async () => ({ jobId: 'job-1', statusUrl: 'https://express-api.adobe.io/status/job-1' }) };
+    }],
+  ]);
+
+  const result = await generateVariation('urn:doc:1', { cta: '20% off' }, '1', 'Croma Earbuds-edit-123');
+
+  assert.deepEqual(result, { jobId: 'job-1', statusUrl: 'https://express-api.adobe.io/status/job-1' });
+  global.fetch = originalFetch;
 });
 
-test('applyEdit merges new edits on top of current edits', () => {
-  const result = applyEdit('tpl_diwali', { headline: 'Old Headline' }, { discount_text: '70%' });
-  assert.deepEqual(result.mergedEdits, { headline: 'Old Headline', discount_text: '70%' });
+test('getJobStatus returns the parsed status response', async () => {
+  process.env.EXPRESS_CLIENT_ID = 'client-1';
+  process.env.EXPRESS_CLIENT_SECRET = 'secret-1';
+  stubFetch([
+    [/\/status\//, async () => ({
+      ok: true,
+      json: async () => ({ jobId: 'job-1', status: 'succeeded', document: { name: 'GD2.express', id: 'urn:doc:2', thumbnailUrl: 'https://example.com/thumb.png' } }),
+    })],
+  ]);
+
+  const result = await getJobStatus('job-1');
+
+  assert.equal(result.status, 'succeeded');
+  assert.equal(result.document.thumbnailUrl, 'https://example.com/thumb.png');
+  global.fetch = originalFetch;
 });
 
-test('applyEdit returns a rendered image url that references the template', () => {
-  const result = applyEdit('tpl_summer', {}, { headline: 'Flash Sale' });
-  assert.match(result.renderedImageUrl, /^https:\/\/mock-express\.local\/render\/tpl_summer\?rev=\d+$/);
+test('pollJobStatus resolves once status is succeeded', async () => {
+  process.env.EXPRESS_CLIENT_ID = 'client-1';
+  process.env.EXPRESS_CLIENT_SECRET = 'secret-1';
+  let calls = 0;
+  stubFetch([
+    [/\/status\//, async () => {
+      calls += 1;
+      const status = calls < 2 ? 'running' : 'succeeded';
+      return {
+        ok: true,
+        json: async () => ({
+          jobId: 'job-2',
+          status,
+          document: status === 'succeeded' ? { thumbnailUrl: 'https://example.com/thumb2.png' } : undefined,
+        }),
+      };
+    }],
+  ]);
+
+  const result = await pollJobStatus('job-2', { intervalMs: 1, timeoutMs: 1000 });
+
+  assert.equal(result.status, 'succeeded');
+  assert.equal(calls, 2);
+  global.fetch = originalFetch;
 });
 
-test('applyEdit returns the fixed updated Croma earbuds image for any edit', () => {
-  const result = applyEdit('tpl_croma_earbuds', {}, { Price: '999' });
-  assert.equal(result.renderedImageUrl, 'https://s7ap1.scene7.com/is/image/varun/croma1-earbuds-updated');
+test('pollJobStatus throws when status is failed', async () => {
+  process.env.EXPRESS_CLIENT_ID = 'client-1';
+  process.env.EXPRESS_CLIENT_SECRET = 'secret-1';
+  stubFetch([
+    [/\/status\//, async () => ({ ok: true, json: async () => ({ jobId: 'job-3', status: 'failed' }) })],
+  ]);
+
+  await assert.rejects(() => pollJobStatus('job-3', { intervalMs: 1, timeoutMs: 1000 }), /failed/);
+  global.fetch = originalFetch;
+});
+
+test('pollJobStatus throws once the timeout elapses without succeeding', async () => {
+  process.env.EXPRESS_CLIENT_ID = 'client-1';
+  process.env.EXPRESS_CLIENT_SECRET = 'secret-1';
+  stubFetch([
+    [/\/status\//, async () => ({ ok: true, json: async () => ({ jobId: 'job-4', status: 'running' }) })],
+  ]);
+
+  await assert.rejects(() => pollJobStatus('job-4', { intervalMs: 5, timeoutMs: 20 }), /timed out/);
+  global.fetch = originalFetch;
+});
+
+test('collectTaggedElements flattens taggedElements across all pages with pageNumber attached', () => {
+  const doc = {
+    documentPages: [
+      { pageNumber: 1, taggedElements: [{ name: 'heading', type: 'text', value: 'Hi' }] },
+      { pageNumber: 2, taggedElements: [{ name: 'footer', type: 'text', value: 'Bye' }] },
+    ],
+  };
+
+  const elements = collectTaggedElements(doc);
+
+  assert.deepEqual(elements, [
+    { name: 'heading', type: 'text', value: 'Hi', pageNumber: 1 },
+    { name: 'footer', type: 'text', value: 'Bye', pageNumber: 2 },
+  ]);
+});
+
+test('formatAllowedEdits lists text elements with their current value and non-text elements with just their type', () => {
+  const elements = [
+    { name: 'heading', type: 'text', value: 'Hi', pageNumber: 1 },
+    { name: 'logo', type: 'image', pageNumber: 1 },
+  ];
+
+  const message = formatAllowedEdits('Croma Earbuds', elements);
+
+  assert.match(message, /Edits allowed on "Croma Earbuds":/);
+  assert.match(message, /- heading: currently "Hi"/);
+  assert.match(message, /- logo \(image\)/);
+});
+
+test('pagesForEdits returns the sorted, comma-joined page numbers containing the edited fields', () => {
+  const elements = [
+    { name: 'heading', pageNumber: 2 },
+    { name: 'cta', pageNumber: 1 },
+    { name: 'footer', pageNumber: 1 },
+  ];
+
+  assert.equal(pagesForEdits(elements, ['cta']), '1');
+  assert.equal(pagesForEdits(elements, ['cta', 'heading']), '1,2');
+});
+
+test('buildPreferredDocumentName appends a timestamp suffix to the base name', () => {
+  const name = buildPreferredDocumentName('Croma Earbuds');
+  assert.match(name, /^Croma Earbuds-edit-\d+$/);
 });
