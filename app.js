@@ -195,6 +195,10 @@ app.post('/', async (req, res) => {
     if (!messages?.length) return;
 
     for (const message of messages) {
+      if (message.context) console.log('[webhook] message.context:', JSON.stringify(message.context));
+      if (message.referral) console.log('[webhook] message.referral:', JSON.stringify(message.referral));
+      if (message.image) console.log('[webhook] message.image:', JSON.stringify(message.image));
+
       const userText = message?.text?.body;
       if (!userText) continue;
 
