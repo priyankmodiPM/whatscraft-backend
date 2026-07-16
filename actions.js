@@ -1,6 +1,5 @@
-const { getTrackedImages, findTrackedImage } = require('./imageStore');
-const { getTemplateInfo, applyEdit } = require('./expressApi');
-const { uploadImageToMeta } = require('./metaUpload');
+const { getTrackedImages, findTrackedImage, recordEdits } = require('./imageStore');
+const expressApi = require('./expressApi');
 
 function formatUnknownImageMessage(phoneNumber) {
   const images = getTrackedImages(phoneNumber);
@@ -18,9 +17,15 @@ async function actionCheckAllowedEdits(phoneNumber, imageId) {
   if (!image) {
     return formatUnknownImageMessage(phoneNumber);
   }
-  const { unlockedLayers } = getTemplateInfo(image.templateId);
-  const layerList = unlockedLayers.map((layer) => `- ${layer}`).join('\n');
-  return `Edits allowed on "${image.name}":\n${layerList}`;
+
+  try {
+    const doc = await expressApi.getTaggedDocument(image.docId);
+    const elements = expressApi.collectTaggedElements(doc);
+    return expressApi.formatAllowedEdits(image.name, elements);
+  } catch (err) {
+    console.error('[actionCheckAllowedEdits] Express API error', { docId: image.docId, message: err.message });
+    return `Sorry, I couldn't check the allowed edits for "${image.name}" right now. Please try again in a moment.`;
+  }
 }
 
 async function actionEditGraphic(phoneNumber, imageId, edits, { sendImage }) {
@@ -29,20 +34,39 @@ async function actionEditGraphic(phoneNumber, imageId, edits, { sendImage }) {
     return formatUnknownImageMessage(phoneNumber);
   }
 
-  const { unlockedLayers } = getTemplateInfo(image.templateId);
-  const requestedKeys = Object.keys(edits || {});
-  const disallowedKeys = requestedKeys.filter((key) => !unlockedLayers.includes(key));
-
-  if (disallowedKeys.length > 0) {
-    const allowedList = unlockedLayers.map((layer) => `- ${layer}`).join('\n');
-    return `I can't edit ${disallowedKeys.join(', ')} on "${image.name}". Allowed edits:\n${allowedList}`;
+  let elements;
+  try {
+    const doc = await expressApi.getTaggedDocument(image.docId);
+    elements = expressApi.collectTaggedElements(doc);
+  } catch (err) {
+    console.error('[actionEditGraphic] Express API error', { docId: image.docId, message: err.message });
+    return `Sorry, I couldn't reach Adobe Express to apply that edit. Please try again in a moment.`;
   }
 
-  const { mergedEdits, renderedImageUrl } = applyEdit(image.templateId, image.currentEdits, edits);
-  image.currentEdits = mergedEdits;
+  const allowedNames = elements.map((element) => element.name);
+  const requestedKeys = Object.keys(edits || {});
+  const disallowedKeys = requestedKeys.filter((key) => !allowedNames.includes(key));
 
-  const uploadedUrl = await uploadImageToMeta(renderedImageUrl);
-  await sendImage(phoneNumber, uploadedUrl);
+  if (disallowedKeys.length > 0) {
+    return `I can't edit ${disallowedKeys.join(', ')} on "${image.name}". ${expressApi.formatAllowedEdits(image.name, elements)}`;
+  }
+
+  const mergedEdits = { ...image.currentEdits, ...edits };
+  const pages = expressApi.pagesForEdits(elements, Object.keys(mergedEdits));
+  const preferredDocumentName = expressApi.buildPreferredDocumentName(image.name);
+
+  let thumbnailUrl;
+  try {
+    const { jobId } = await expressApi.generateVariation(image.docId, mergedEdits, pages, preferredDocumentName);
+    const result = await expressApi.pollJobStatus(jobId);
+    thumbnailUrl = result.document.thumbnailUrl;
+  } catch (err) {
+    console.error('[actionEditGraphic] generate/poll error', { docId: image.docId, message: err.message });
+    return `Sorry, something went wrong generating your updated "${image.name}". Please try again.`;
+  }
+
+  recordEdits(phoneNumber, imageId, edits);
+  await sendImage(phoneNumber, thumbnailUrl);
 
   const summary = Object.entries(edits).map(([key, value]) => `• ${key}: ${value}`).join('\n');
   return `Updated "${image.name}":\n${summary}`;
