@@ -31,6 +31,14 @@ test('getTrackedImages returns an empty list when the catalog file is missing', 
   assert.deepEqual(images, []);
 });
 
+test('getTrackedImages returns an empty list when the catalog is not an array', () => {
+  writeFixtureCatalog({});
+
+  const images = getTrackedImages('phone-2-non-array');
+
+  assert.deepEqual(images, []);
+});
+
 test('findTrackedImage returns the matching image by id', () => {
   writeFixtureCatalog([{ id: 'img_3', name: 'Croma Earbuds', docId: 'urn:doc:3' }]);
 

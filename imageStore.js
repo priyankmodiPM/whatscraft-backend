@@ -8,7 +8,12 @@ function catalogPath() {
 function loadCatalog() {
   try {
     const raw = fs.readFileSync(catalogPath(), 'utf8');
-    return JSON.parse(raw);
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) {
+      console.error('[imageStore] failed to read catalog', { path: catalogPath(), message: 'catalog is not an array' });
+      return [];
+    }
+    return parsed;
   } catch (err) {
     console.error('[imageStore] failed to read catalog', { path: catalogPath(), message: err.message });
     return [];
