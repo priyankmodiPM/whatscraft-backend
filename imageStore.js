@@ -1,28 +1,38 @@
-const SEED_IMAGES = [
-  { id: 'img_1', name: 'Diwali Offer Banner', templateId: 'tpl_diwali' },
-  { id: 'img_2', name: 'Summer Sale Flyer', templateId: 'tpl_summer' },
-  {
-    id: 'img_3',
-    name: 'Croma Earbuds',
-    templateId: 'tpl_croma_earbuds',
-    url: 'https://s7ap1.scene7.com/is/image/varun/croma1-earbuds',
-  },
-];
+const fs = require('node:fs');
+const path = require('node:path');
 
-const trackedImages = new Map();
+function catalogPath() {
+  return process.env.EXPRESS_TEMPLATES_FILE || path.join(__dirname, 'data', 'express-templates.json');
+}
+
+function loadCatalog() {
+  try {
+    const raw = fs.readFileSync(catalogPath(), 'utf8');
+    return JSON.parse(raw);
+  } catch (err) {
+    console.error('[imageStore] failed to read catalog', { path: catalogPath(), message: err.message });
+    return [];
+  }
+}
+
+const conversationEdits = new Map();
 
 function getTrackedImages(phoneNumber) {
-  if (!trackedImages.has(phoneNumber)) {
-    trackedImages.set(
-      phoneNumber,
-      SEED_IMAGES.map((image) => ({ ...image, currentEdits: {} }))
-    );
-  }
-  return trackedImages.get(phoneNumber);
+  return loadCatalog().map((entry) => ({
+    ...entry,
+    currentEdits: conversationEdits.get(`${phoneNumber}:${entry.id}`) || {},
+  }));
 }
 
 function findTrackedImage(phoneNumber, imageId) {
   return getTrackedImages(phoneNumber).find((image) => image.id === imageId);
 }
 
-module.exports = { getTrackedImages, findTrackedImage };
+function recordEdits(phoneNumber, imageId, newEdits) {
+  const key = `${phoneNumber}:${imageId}`;
+  const merged = { ...(conversationEdits.get(key) || {}), ...newEdits };
+  conversationEdits.set(key, merged);
+  return merged;
+}
+
+module.exports = { getTrackedImages, findTrackedImage, recordEdits };

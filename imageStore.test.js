@@ -1,35 +1,67 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { getTrackedImages, findTrackedImage } = require('./imageStore');
+const fs = require('node:fs');
+const path = require('node:path');
+const os = require('node:os');
+const { getTrackedImages, findTrackedImage, recordEdits } = require('./imageStore');
 
-test('getTrackedImages seeds 3 images on first access', () => {
-  const images = getTrackedImages('111');
-  assert.equal(images.length, 3);
-  assert.deepEqual(images.map((img) => img.id), ['img_1', 'img_2', 'img_3']);
-  assert.deepEqual(images[0].currentEdits, {});
+function writeFixtureCatalog(entries) {
+  const fixturePath = path.join(os.tmpdir(), `express-templates-${Date.now()}-${Math.random().toString(36).slice(2)}.json`);
+  fs.writeFileSync(fixturePath, JSON.stringify(entries));
+  process.env.EXPRESS_TEMPLATES_FILE = fixturePath;
+}
+
+test('getTrackedImages reads the catalog from EXPRESS_TEMPLATES_FILE', () => {
+  writeFixtureCatalog([
+    { id: 'img_1', name: 'Diwali Offer Banner', docId: 'urn:doc:1' },
+    { id: 'img_2', name: 'Summer Sale Flyer', docId: 'urn:doc:2' },
+  ]);
+
+  const images = getTrackedImages('phone-1');
+
+  assert.equal(images.length, 2);
+  assert.deepEqual(images[0], { id: 'img_1', name: 'Diwali Offer Banner', docId: 'urn:doc:1', currentEdits: {} });
 });
 
-test('getTrackedImages returns the same array on repeated calls for the same phone number', () => {
-  const first = getTrackedImages('222');
-  first[0].currentEdits.headline = 'Flash Sale';
-  const second = getTrackedImages('222');
-  assert.equal(second[0].currentEdits.headline, 'Flash Sale');
+test('getTrackedImages returns an empty list when the catalog file is missing', () => {
+  process.env.EXPRESS_TEMPLATES_FILE = path.join(os.tmpdir(), 'does-not-exist.json');
+
+  const images = getTrackedImages('phone-2');
+
+  assert.deepEqual(images, []);
 });
 
-test('getTrackedImages seeds independently per phone number', () => {
-  getTrackedImages('333')[0].currentEdits.headline = 'Only for 333';
-  const other = getTrackedImages('444');
-  assert.deepEqual(other[0].currentEdits, {});
-});
+test('findTrackedImage returns the matching image by id', () => {
+  writeFixtureCatalog([{ id: 'img_3', name: 'Croma Earbuds', docId: 'urn:doc:3' }]);
 
-test('findTrackedImage returns the matching image', () => {
-  getTrackedImages('555');
-  const image = findTrackedImage('555', 'img_2');
-  assert.equal(image.name, 'Summer Sale Flyer');
+  const image = findTrackedImage('phone-3', 'img_3');
+
+  assert.equal(image.name, 'Croma Earbuds');
 });
 
 test('findTrackedImage returns undefined for an unknown id', () => {
-  getTrackedImages('666');
-  const image = findTrackedImage('666', 'img_999');
+  writeFixtureCatalog([{ id: 'img_3', name: 'Croma Earbuds', docId: 'urn:doc:3' }]);
+
+  const image = findTrackedImage('phone-4', 'img_nope');
+
   assert.equal(image, undefined);
+});
+
+test('recordEdits merges edits per phone number and image id, visible via findTrackedImage', () => {
+  writeFixtureCatalog([{ id: 'img_1', name: 'Diwali Offer Banner', docId: 'urn:doc:1' }]);
+
+  recordEdits('phone-5', 'img_1', { headline: 'Flash Sale' });
+  recordEdits('phone-5', 'img_1', { discount_text: '70%' });
+
+  const image = findTrackedImage('phone-5', 'img_1');
+  assert.deepEqual(image.currentEdits, { headline: 'Flash Sale', discount_text: '70%' });
+});
+
+test('recordEdits keeps edits independent per phone number', () => {
+  writeFixtureCatalog([{ id: 'img_1', name: 'Diwali Offer Banner', docId: 'urn:doc:1' }]);
+
+  recordEdits('phone-6', 'img_1', { headline: 'Only for phone-6' });
+
+  const otherPhoneImage = findTrackedImage('phone-7', 'img_1');
+  assert.deepEqual(otherPhoneImage.currentEdits, {});
 });
