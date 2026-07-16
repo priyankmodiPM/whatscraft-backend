@@ -1,5 +1,5 @@
 const { getTrackedImages, findTrackedImage, recordEdits } = require('./imageStore');
-const expressApi = require('./expressApi');
+const expressApi = require('./express/expressApi');
 
 function formatUnknownImageMessage(phoneNumber) {
   const images = getTrackedImages(phoneNumber);

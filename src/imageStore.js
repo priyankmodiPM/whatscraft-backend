@@ -2,7 +2,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 function catalogPath() {
-  return process.env.EXPRESS_TEMPLATES_FILE || path.join(__dirname, 'data', 'express-templates.json');
+  return process.env.EXPRESS_TEMPLATES_FILE || path.join(__dirname, '..', 'data', 'express-templates.json');
 }
 
 function loadCatalog() {

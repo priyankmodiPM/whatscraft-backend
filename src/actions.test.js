@@ -4,7 +4,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const os = require('node:os');
 const { actionCheckAllowedEdits, actionEditGraphic } = require('./actions');
-const expressApi = require('./expressApi');
+const expressApi = require('./express/expressApi');
 const { findTrackedImage, recordEdits } = require('./imageStore');
 
 function writeFixtureCatalog(entries) {
