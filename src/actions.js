@@ -41,7 +41,7 @@ async function actionCheckAllowedEdits(phoneNumber, imageId) {
     const elementsWithCurrentEdits = withCurrentEdits(elements, image.currentEdits);
     return {
       type: 'edit_options',
-      bodyText: expressApi.formatAllowedEdits(image.name, elementsWithCurrentEdits, { includeInstruction: false }),
+      bodyText: 'What would you like to change?',
       options: expressApi.buildEditOptions(elementsWithCurrentEdits),
       historyText: expressApi.formatAllowedEdits(image.name, elementsWithCurrentEdits),
     };

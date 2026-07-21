@@ -77,31 +77,18 @@ function sendButtons(to, bodyText, options) {
   });
 }
 
-function sendList(to, bodyText, buttonText, options) {
-  return whatsappPost({
-    messaging_product: 'whatsapp',
-    to,
-    type: 'interactive',
-    interactive: {
-      type: 'list',
-      body: { text: bodyText },
-      action: {
-        button: buttonText,
-        sections: [{ title: 'Edits', rows: options.map((option) => ({ id: option.id, title: option.title })) }],
-      },
-    },
-  });
-}
+// WhatsApp reply-button messages cap out at 3 buttons, so options beyond that
+// go out as additional button messages rather than falling back to a list picker.
+const BUTTONS_PER_MESSAGE = 3;
 
-// Sends the list of allowed edits as tappable options rather than plain text,
-// falling back to a list message when there are more than fit in reply buttons.
 async function sendEditOptions(to, { bodyText, options }) {
   if (options.length === 0) {
     await sendText(to, bodyText);
-  } else if (options.length > 3) {
-    await sendList(to, bodyText, 'Choose a field', options);
-  } else {
-    await sendButtons(to, bodyText, options);
+    return;
+  }
+  for (let i = 0; i < options.length; i += BUTTONS_PER_MESSAGE) {
+    const chunk = options.slice(i, i + BUTTONS_PER_MESSAGE);
+    await sendButtons(to, i === 0 ? bodyText : 'More edits:', chunk);
   }
 }
 

@@ -84,13 +84,25 @@ function formatAllowedEdits(name, elements, { includeInstruction = true } = {}) 
 }
 
 function humanizeFieldName(name) {
-  return name.replace(/_(text|image)$/i, '').replace(/_/g, ' ');
+  return name
+    .replace(/_/g, ' ')
+    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+    .toLowerCase();
+}
+
+// WhatsApp reply-button titles are capped at 20 characters; trim on a word boundary
+// rather than cutting mid-word.
+function truncateTitle(title, maxLength = 20) {
+  if (title.length <= maxLength) return title;
+  const truncated = title.slice(0, maxLength);
+  const lastSpace = truncated.lastIndexOf(' ');
+  return lastSpace > 0 ? truncated.slice(0, lastSpace) : truncated;
 }
 
 function buildEditOptions(elements) {
   return elements.map((element) => ({
     id: `edit:${element.name}`,
-    title: `Change ${humanizeFieldName(element.name)}`.slice(0, 20),
+    title: truncateTitle(`Change ${humanizeFieldName(element.name)}`),
   }));
 }
 
