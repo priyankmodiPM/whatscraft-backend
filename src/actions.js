@@ -39,7 +39,12 @@ async function actionCheckAllowedEdits(phoneNumber, imageId) {
     const doc = await expressApi.getTaggedDocument(image.docId);
     const elements = expressApi.collectTaggedElements(doc);
     const elementsWithCurrentEdits = withCurrentEdits(elements, image.currentEdits);
-    return expressApi.formatAllowedEdits(image.name, elementsWithCurrentEdits);
+    return {
+      type: 'edit_options',
+      bodyText: expressApi.formatAllowedEdits(image.name, elementsWithCurrentEdits, { includeInstruction: false }),
+      options: expressApi.buildEditOptions(elementsWithCurrentEdits),
+      historyText: expressApi.formatAllowedEdits(image.name, elementsWithCurrentEdits),
+    };
   } catch (err) {
     console.error('[actionCheckAllowedEdits] Express API error', { docId: image.docId, message: err.message });
     return `Sorry, I couldn't check the allowed edits for "${image.name}" right now. Please try again in a moment.`;
