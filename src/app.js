@@ -61,6 +61,50 @@ function sendImage(to, link) {
   return whatsappPost({ messaging_product: 'whatsapp', to, type: 'image', image: { link } });
 }
 
+// WhatsApp reply-button messages support at most 3 buttons.
+function sendButtons(to, bodyText, options) {
+  return whatsappPost({
+    messaging_product: 'whatsapp',
+    to,
+    type: 'interactive',
+    interactive: {
+      type: 'button',
+      body: { text: bodyText },
+      action: {
+        buttons: options.map((option) => ({ type: 'reply', reply: { id: option.id, title: option.title } })),
+      },
+    },
+  });
+}
+
+function sendList(to, bodyText, buttonText, options) {
+  return whatsappPost({
+    messaging_product: 'whatsapp',
+    to,
+    type: 'interactive',
+    interactive: {
+      type: 'list',
+      body: { text: bodyText },
+      action: {
+        button: buttonText,
+        sections: [{ title: 'Edits', rows: options.map((option) => ({ id: option.id, title: option.title })) }],
+      },
+    },
+  });
+}
+
+// Sends the list of allowed edits as tappable options rather than plain text,
+// falling back to a list message when there are more than fit in reply buttons.
+async function sendEditOptions(to, { bodyText, options }) {
+  if (options.length === 0) {
+    await sendText(to, bodyText);
+  } else if (options.length > 3) {
+    await sendList(to, bodyText, 'Choose a field', options);
+  } else {
+    await sendButtons(to, bodyText, options);
+  }
+}
+
 // ── GPT tool definitions ─────────────────────────────────────────────────────
 
 const tools = [
@@ -200,7 +244,8 @@ app.post('/', async (req, res) => {
       if (message.referral) console.log('[webhook] message.referral:', JSON.stringify(message.referral));
       if (message.image) console.log('[webhook] message.image:', JSON.stringify(message.image));
 
-      const userText = message?.text?.body;
+      const interactiveReply = message?.interactive?.button_reply || message?.interactive?.list_reply;
+      const userText = message?.text?.body || interactiveReply?.title;
       if (!userText) continue;
 
       const phoneNumber = message.from;
@@ -217,6 +262,7 @@ app.post('/', async (req, res) => {
       console.log(`GPT chose action: ${action}`, args);
 
       let replyText;
+      let skipSend = false;
 
       switch (action) {
         case 'list_campaign_graphics':
@@ -228,10 +274,18 @@ app.post('/', async (req, res) => {
           replyText = args.question;
           break;
 
-        case 'check_allowed_edits':
+        case 'check_allowed_edits': {
           await sendText(phoneNumber, '⏳ Checking allowed edits...');
-          replyText = await actionCheckAllowedEdits(phoneNumber, args.image_id);
+          const result = await actionCheckAllowedEdits(phoneNumber, args.image_id);
+          if (typeof result === 'string') {
+            replyText = result;
+          } else {
+            await sendEditOptions(phoneNumber, result);
+            replyText = result.historyText;
+            skipSend = true;
+          }
           break;
+        }
 
         case 'edit_graphic':
           await sendText(phoneNumber, '⏳ Applying edits to your graphic...');
@@ -247,7 +301,9 @@ app.post('/', async (req, res) => {
           replyText = "Sorry, I couldn't figure out how to handle that request.";
       }
 
-      await sendText(phoneNumber, replyText);
+      if (!skipSend) {
+        await sendText(phoneNumber, replyText);
+      }
       appendHistory(phoneNumber, 'assistant', replyText);
     }
   } catch (err) {

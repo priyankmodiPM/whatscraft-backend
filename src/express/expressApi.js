@@ -69,14 +69,29 @@ function collectTaggedElements(taggedDocument) {
   return elements;
 }
 
-function formatAllowedEdits(name, elements) {
+function formatAllowedEdits(name, elements, { includeInstruction = true } = {}) {
   const lines = elements.map((element) =>
     element.type === 'text'
       ? `- ${element.name}: currently "${element.value}"`
       : `- ${element.name} (${element.type})`
   );
-  const example = elements[0]?.name || 'a field';
-  return `Edits allowed on "${name}":\n${lines.join('\n')}\nTell me what you'd like to change and to what, e.g. "change ${example} to ...".`;
+  let text = `Edits allowed on "${name}":\n${lines.join('\n')}`;
+  if (includeInstruction) {
+    const example = elements[0]?.name || 'a field';
+    text += `\nTell me what you'd like to change and to what, e.g. "change ${example} to ...".`;
+  }
+  return text;
+}
+
+function humanizeFieldName(name) {
+  return name.replace(/_(text|image)$/i, '').replace(/_/g, ' ');
+}
+
+function buildEditOptions(elements) {
+  return elements.map((element) => ({
+    id: `edit:${element.name}`,
+    title: `Change ${humanizeFieldName(element.name)}`.slice(0, 20),
+  }));
 }
 
 function pagesForEdits(elements, editKeys) {
@@ -97,6 +112,7 @@ module.exports = {
   pollJobStatus,
   collectTaggedElements,
   formatAllowedEdits,
+  buildEditOptions,
   pagesForEdits,
   buildPreferredDocumentName,
 };
