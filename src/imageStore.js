@@ -22,8 +22,24 @@ function loadCatalog() {
 
 const conversationEdits = new Map();
 
+// Brand-new designs created at runtime via create_design, keyed by phone number.
+// These are `source: 'local'` (canned images) as opposed to the `source: 'express'`
+// catalog entries which are backed by the real Adobe Express API.
+const createdDesigns = new Map();
+
+function createDesign(phoneNumber, design) {
+  const list = createdDesigns.get(phoneNumber) || [];
+  const id = `local_${list.length + 1}`;
+  const entry = { id, source: 'local', ...design };
+  list.push(entry);
+  createdDesigns.set(phoneNumber, list);
+  return entry;
+}
+
 function getTrackedImages(phoneNumber) {
-  return loadCatalog().map((entry) => ({
+  const catalog = loadCatalog().map((entry) => ({ ...entry, source: 'express' }));
+  const created = createdDesigns.get(phoneNumber) || [];
+  return [...catalog, ...created].map((entry) => ({
     ...entry,
     currentEdits: conversationEdits.get(`${phoneNumber}:${entry.id}`) || {},
   }));
@@ -40,4 +56,4 @@ function recordEdits(phoneNumber, imageId, newEdits) {
   return merged;
 }
 
-module.exports = { getTrackedImages, findTrackedImage, recordEdits };
+module.exports = { getTrackedImages, findTrackedImage, recordEdits, createDesign };

@@ -3,6 +3,7 @@ const OpenAI = require('openai');
 const { getTrackedImages } = require('./imageStore');
 const {
   actionListCampaignGraphics,
+  actionCreateDesign,
   actionCheckAllowedEdits,
   actionEditGraphic,
   actionGenerateBulkGraphics,
@@ -106,6 +107,27 @@ const tools = [
   {
     type: 'function',
     function: {
+      name: 'create_design',
+      description:
+        'Create a brand-new single marketing creative from a text description, for an occasion or theme that has NO existing template (e.g. Onam, Pongal). Use when the user wants to make/create/design a new banner or creative from scratch. Do NOT use this for bulk generation from a CSV/Excel file — that is generate_bulk_graphics.',
+      parameters: {
+        type: 'object',
+        properties: {
+          occasion: { type: 'string', description: 'The occasion or theme, e.g. "Onam"' },
+          products: {
+            type: 'array',
+            items: { type: 'string' },
+            description: 'Products to feature, e.g. ["LG washing machine", "dishwasher"]',
+          },
+          offer: { type: 'string', description: 'The offer or discount to show, e.g. "20% off"' },
+        },
+        required: ['occasion'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
       name: 'ask_for_more_information',
       description: 'Ask the user a clarifying question when the request is ambiguous or incomplete',
       parameters: {
@@ -122,7 +144,7 @@ const tools = [
     function: {
       name: 'check_allowed_edits',
       description:
-        'Check what edits are permitted on a specific graphic. Pick image_id from the "Images previously sent to this user" list in the system prompt that best matches what the user is referring to.',
+        'Show the list of fields the user CAN edit on a graphic. Use this ONLY when the user asks what can be changed / wants the options (e.g. "what can I edit?", "edit", "make changes") and does NOT give a specific new value. If the user already states a change and its value, use edit_graphic instead. Pick image_id from the "Images previously sent to this user" list in the system prompt that best matches what the user is referring to.',
       parameters: {
         type: 'object',
         properties: {
@@ -137,7 +159,7 @@ const tools = [
     function: {
       name: 'edit_graphic',
       description:
-        'Edit a specific graphic via Adobe Express API (e.g. change discount text, colors). Pick image_id from the "Images previously sent to this user" list in the system prompt that best matches what the user is referring to. If the user asks to translate a tag\'s text into another language, translate it yourself and pass the translated string as the edit value — for Hindi, always use Devanagari script (e.g. "उपलब्ध"), never a romanized transliteration.',
+        'Apply one or more concrete edits to a specific graphic. Use this WHENEVER the user states what to change AND the new value — e.g. "make the background marigold", "add my address MG Road Kochi", "change the offer to 7500", "translate the banner to Malayalam". Put every requested change into the edits object (multiple keys allowed). Pick image_id from the "Images previously sent to this user" list in the system prompt that best matches what the user is referring to. If the user asks to translate a tag\'s text into another language, translate it yourself and pass the translated string as the edit value — for Hindi always use Devanagari script (e.g. "उपलब्ध"), for Malayalam always use Malayalam script (e.g. "ഓണം"), never a romanized transliteration.',
       parameters: {
         type: 'object',
         properties: {
@@ -180,7 +202,10 @@ async function decideAction(phoneNumber, userMessage) {
 Analyze the user's message and conversation history, then call the appropriate tool.
 Always call exactly one tool — never reply with plain text.
 If the request is ambiguous or missing details, use ask_for_more_information.
-If the user asks to translate a tag's text into another language (e.g. "change the headline to Hindi"), translate the current text yourself before calling edit_graphic and pass the translated text as the edit value. For Hindi, the translation must be in Devanagari script (e.g. "उपलब्ध"), not a romanized/transliterated form.
+If the user wants a brand-new creative for an occasion that has no existing template (e.g. Onam, Pongal), use create_design.
+Choosing between edit_graphic and check_allowed_edits: if the user's message already contains a concrete change and its value (e.g. "make the background marigold", "add my address MG Road Kochi"), call edit_graphic with all of those changes in the edits object. Only call check_allowed_edits when the user asks what can be changed or wants the list of options WITHOUT giving a specific value.
+When editing, prefer these field names when they apply: headline, background, address, offer.
+If the user asks to translate a tag's text into another language (e.g. "change the headline to Hindi", "translate the banner to Malayalam"), translate the current text yourself before calling edit_graphic and pass the translated text as the edit value. For Hindi, use Devanagari script (e.g. "उपलब्ध"); for Malayalam, use Malayalam script (e.g. "ഓണം"). Never use a romanized/transliterated form.
 
 Images previously sent to this user (reference by id):
 ${imagesList}`,
@@ -257,7 +282,13 @@ app.post('/', async (req, res) => {
           replyText = await actionListCampaignGraphics();
           break;
 
+        case 'create_design':
+          await sendText(phoneNumber, '🎨 Creating your design, this may take a moment...');
+          replyText = await actionCreateDesign(phoneNumber, args, { sendImage });
+          break;
+
         case 'ask_for_more_information':
+          console.log('[action:ask_for_more_information]', { question: args.question });
           replyText = args.question;
           break;
 

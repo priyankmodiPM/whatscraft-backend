@@ -20,7 +20,7 @@ test('getTrackedImages reads the catalog from EXPRESS_TEMPLATES_FILE', () => {
   const images = getTrackedImages('phone-1');
 
   assert.equal(images.length, 2);
-  assert.deepEqual(images[0], { id: 'img_1', name: 'Diwali Offer Banner', docId: 'urn:doc:1', currentEdits: {} });
+  assert.deepEqual(images[0], { id: 'img_1', name: 'Diwali Offer Banner', docId: 'urn:doc:1', source: 'express', currentEdits: {} });
 });
 
 test('getTrackedImages returns an empty list when the catalog file is missing', () => {
