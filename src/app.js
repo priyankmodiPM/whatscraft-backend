@@ -106,7 +106,7 @@ const tools = [
     function: {
       name: 'edit_graphic',
       description:
-        'Edit a specific graphic via Adobe Express API (e.g. change discount text, colors). Pick image_id from the "Images previously sent to this user" list in the system prompt that best matches what the user is referring to.',
+        'Edit a specific graphic via Adobe Express API (e.g. change discount text, colors). Pick image_id from the "Images previously sent to this user" list in the system prompt that best matches what the user is referring to. If the user asks to translate a tag\'s text into another language, translate it yourself and pass the translated string as the edit value — for Hindi, always use Devanagari script (e.g. "उपलब्ध"), never a romanized transliteration.',
       parameters: {
         type: 'object',
         properties: {
@@ -149,6 +149,7 @@ async function decideAction(phoneNumber, userMessage) {
 Analyze the user's message and conversation history, then call the appropriate tool.
 Always call exactly one tool — never reply with plain text.
 If the request is ambiguous or missing details, use ask_for_more_information.
+If the user asks to translate a tag's text into another language (e.g. "change the headline to Hindi"), translate the current text yourself before calling edit_graphic and pass the translated text as the edit value. For Hindi, the translation must be in Devanagari script (e.g. "उपलब्ध"), not a romanized/transliterated form.
 
 Images previously sent to this user (reference by id):
 ${imagesList}`,

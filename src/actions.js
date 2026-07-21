@@ -18,6 +18,17 @@ function withCurrentEdits(elements, currentEdits) {
   );
 }
 
+const MAX_DISCOUNT_PERCENT = 40;
+
+function isDiscountField(name) {
+  return /discount/i.test(name);
+}
+
+function parsePercent(value) {
+  const match = String(value).match(/(\d+(?:\.\d+)?)/);
+  return match ? Number(match[1]) : null;
+}
+
 async function actionCheckAllowedEdits(phoneNumber, imageId) {
   const image = findTrackedImage(phoneNumber, imageId);
   if (!image) {
@@ -57,6 +68,16 @@ async function actionEditGraphic(phoneNumber, imageId, edits, { sendImage }) {
   if (disallowedKeys.length > 0) {
     const elementsWithCurrentEdits = withCurrentEdits(elements, image.currentEdits);
     return `I can't edit ${disallowedKeys.join(', ')} on "${image.name}". ${expressApi.formatAllowedEdits(image.name, elementsWithCurrentEdits)}`;
+  }
+
+  const oversizedDiscountKeys = requestedKeys.filter((key) => {
+    if (!isDiscountField(key)) return false;
+    const percent = parsePercent(edits[key]);
+    return percent !== null && percent > MAX_DISCOUNT_PERCENT;
+  });
+
+  if (oversizedDiscountKeys.length > 0) {
+    return `The maximum discount I can apply on "${image.name}" is ${MAX_DISCOUNT_PERCENT}%. Try again with ${MAX_DISCOUNT_PERCENT}% or less.`;
   }
 
   const mergedEdits = { ...image.currentEdits, ...edits };
