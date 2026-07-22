@@ -3,9 +3,10 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const os = require('node:os');
-const { actionCheckAllowedEdits, actionEditGraphic } = require('./actions');
+const { actionCheckAllowedEdits, actionEditGraphic, actionSelectTvModel } = require('./actions');
 const expressApi = require('./express/expressApi');
 const { findTrackedImage, recordEdits } = require('./imageStore');
+const { parseEditOptionId } = require('./interactiveReply');
 
 function writeFixtureCatalog(entries) {
   const fixturePath = path.join(os.tmpdir(), `express-templates-${Date.now()}-${Math.random().toString(36).slice(2)}.json`);
@@ -146,4 +147,32 @@ test('actionEditGraphic tells the user delivery failed but keeps the recorded ed
 
   const image = findTrackedImage('phone-7', 'img_1');
   assert.deepEqual(image.currentEdits, { cta: '20% off' });
+});
+
+test('actionSelectTvModel returns the 3 fixed TV model options with the question body text', () => {
+  const result = actionSelectTvModel('img_1');
+
+  assert.equal(result.type, 'edit_options');
+  assert.equal(result.bodyText, 'Which model would you like to use?');
+  assert.equal(result.options.length, 3);
+  assert.deepEqual(
+    result.options.map((option) => option.title),
+    ['Sony Bravia K-75', 'LG UA82 AI', 'Samsung UA4']
+  );
+});
+
+test('actionSelectTvModel encodes the same fixed productImage/oldPrice/price edits into every option id', () => {
+  const result = actionSelectTvModel('img_1');
+
+  for (const option of result.options) {
+    const parsed = parseEditOptionId(option.id);
+    assert.deepEqual(parsed, {
+      imageId: 'img_1',
+      edits: {
+        productImage: 'https://s7ap1.scene7.com/is/image/healthmonitor/SonyTv?wid=1000',
+        oldPrice: 33999,
+        price: 27199,
+      },
+    });
+  }
 });

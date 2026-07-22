@@ -7,7 +7,9 @@ const {
   actionCheckAllowedEdits,
   actionEditGraphic,
   actionGenerateBulkGraphics,
+  actionSelectTvModel,
 } = require('./actions');
+const { parseEditOptionId, messageTextForInteractiveReply } = require('./interactiveReply');
 
 const app = express();
 app.use(express.json());
@@ -157,6 +159,21 @@ const tools = [
   {
     type: 'function',
     function: {
+      name: 'select_tv_model',
+      description:
+        'Use when the user asks to change or set the product in a graphic to a TV, without specifying which model. Do not use this for edits to text fields or other product types — use edit_graphic for those.',
+      parameters: {
+        type: 'object',
+        properties: {
+          image_id: { type: 'string', description: 'The id of the image to edit, from the tracked images list' },
+        },
+        required: ['image_id'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
       name: 'edit_graphic',
       description:
         'Apply one or more concrete edits to a specific graphic. Use this WHENEVER the user states what to change AND the new value — e.g. "make the background marigold", "add my address MG Road Kochi", "change the offer to 7500", "translate the banner to Malayalam". Put every requested change into the edits object (multiple keys allowed). Pick image_id from the "Images previously sent to this user" list in the system prompt that best matches what the user is referring to. If the user asks to translate a tag\'s text into another language, translate it yourself and pass the translated string as the edit value — for Hindi always use Devanagari script (e.g. "उपलब्ध"), for Malayalam always use Malayalam script (e.g. "ഓണം"), never a romanized transliteration.',
@@ -202,6 +219,7 @@ async function decideAction(phoneNumber, userMessage) {
 Analyze the user's message and conversation history, then call the appropriate tool.
 Always call exactly one tool — never reply with plain text.
 If the request is ambiguous or missing details, use ask_for_more_information.
+If the user says which field they want to change but hasn't given the new value yet, call ask_for_more_information to ask what to change it to. If a later message in the conversation then supplies that value, call edit_graphic with the field and value instead of asking again.
 If the user wants a brand-new creative for an occasion that has no existing template (e.g. Onam, Pongal), use create_design.
 Choosing between edit_graphic and check_allowed_edits: if the user's message already contains a concrete change and its value (e.g. "make the background marigold", "add my address MG Road Kochi"), call edit_graphic with all of those changes in the edits object. Only call check_allowed_edits when the user asks what can be changed or wants the list of options WITHOUT giving a specific value.
 When editing, prefer these field names when they apply: headline, background, address, offer.
@@ -257,7 +275,7 @@ app.post('/', async (req, res) => {
       if (message.image) console.log('[webhook] message.image:', JSON.stringify(message.image));
 
       const interactiveReply = message?.interactive?.button_reply || message?.interactive?.list_reply;
-      const userText = message?.text?.body || interactiveReply?.title;
+      const userText = message?.text?.body || (interactiveReply && messageTextForInteractiveReply(interactiveReply));
       if (!userText) continue;
 
       const phoneNumber = message.from;
@@ -302,6 +320,14 @@ app.post('/', async (req, res) => {
             replyText = result.historyText;
             skipSend = true;
           }
+          break;
+        }
+
+        case 'select_tv_model': {
+          const result = actionSelectTvModel(args.image_id);
+          await sendEditOptions(phoneNumber, result);
+          replyText = result.bodyText;
+          skipSend = true;
           break;
         }
 

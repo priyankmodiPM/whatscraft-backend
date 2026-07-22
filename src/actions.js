@@ -2,6 +2,11 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { getTrackedImages, findTrackedImage, recordEdits, createDesign } = require('./imageStore');
 const expressApi = require('./express/expressApi');
+const { buildValueEditId } = require('./interactiveReply');
+
+const TV_PLACEHOLDER_IMAGE_URL = 'https://s7ap1.scene7.com/is/image/healthmonitor/SonyTv?wid=1000';
+const TV_MODEL_TITLES = ['Sony Bravia K-75', 'LG UA82 AI', 'Samsung UA4'];
+const TV_MODEL_EDITS = { productImage: TV_PLACEHOLDER_IMAGE_URL, oldPrice: 33999, price: 27199 };
 
 function loadOnamDesign() {
   const filePath = process.env.ONAM_DESIGN_FILE || path.join(__dirname, '..', 'data', 'onam-design.json');
@@ -148,7 +153,7 @@ async function actionCheckAllowedEdits(phoneNumber, imageId) {
     return {
       type: 'edit_options',
       bodyText: 'What would you like to change?',
-      options: expressApi.buildEditOptions(elements),
+      options: expressApi.buildEditOptions(elements, imageId),
       historyText: expressApi.formatAllowedEdits(image.name, elements),
     };
   }
@@ -160,13 +165,24 @@ async function actionCheckAllowedEdits(phoneNumber, imageId) {
     return {
       type: 'edit_options',
       bodyText: 'What would you like to change?',
-      options: expressApi.buildEditOptions(elementsWithCurrentEdits),
+      options: expressApi.buildEditOptions(elementsWithCurrentEdits, imageId),
       historyText: expressApi.formatAllowedEdits(image.name, elementsWithCurrentEdits),
     };
   } catch (err) {
     console.error('[actionCheckAllowedEdits] Express API error', { docId: image.docId, message: err.message });
     return `Sorry, I couldn't check the allowed edits for "${image.name}" right now. Please try again in a moment.`;
   }
+}
+
+function actionSelectTvModel(imageId) {
+  return {
+    type: 'edit_options',
+    bodyText: 'Which model would you like to use?',
+    options: TV_MODEL_TITLES.map((title) => ({
+      id: buildValueEditId(imageId, TV_MODEL_EDITS),
+      title,
+    })),
+  };
 }
 
 // Routes to the right edit path based on where the design came from:
@@ -255,4 +271,5 @@ module.exports = {
   actionCheckAllowedEdits,
   actionEditGraphic,
   actionGenerateBulkGraphics,
+  actionSelectTvModel,
 };
