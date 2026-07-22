@@ -117,6 +117,24 @@ test('editGraphic applies an allowed edit end-to-end: generates, polls, and retu
   assert.deepEqual(updated.currentEdits, { cta: '20% off' });
 });
 
+test('editGraphic expands the TV placeholder image token to the real S3 URL before calling generate-variation', async () => {
+  expressApi.getTaggedDocument = async () => TV_ELEMENTS_DOC;
+  expressApi.generateVariation = async (docId, tagMappings) => {
+    assert.equal(tagMappings.productImage, expressFlow.TV_PLACEHOLDER_IMAGE_URL);
+    assert.notEqual(tagMappings.productImage, expressFlow.TV_PLACEHOLDER_IMAGE_TOKEN);
+    return { jobId: 'job-tv', statusUrl: 'https://express-api.adobe.io/status/job-tv' };
+  };
+  expressApi.pollJobStatus = async () => ({ status: 'succeeded', document: { thumbnailUrl: 'https://example.com/tv-thumb.png' } });
+  const image = catalogImage('phone-tv');
+
+  const edits = { productImage: expressFlow.TV_PLACEHOLDER_IMAGE_TOKEN, oldPrice: '33999', price: '27199' };
+  const result = await expressFlow.editGraphic('phone-tv', image, edits, {});
+
+  assert.equal(result.status, 'success');
+  const updated = findTrackedImage('phone-tv', 'img_1');
+  assert.equal(updated.currentEdits.productImage, expressFlow.TV_PLACEHOLDER_IMAGE_URL);
+});
+
 test('editGraphic returns an api_error/generate_failed status and does not record the edit when generation fails', async () => {
   expressApi.getTaggedDocument = async () => SAMPLE_ELEMENTS_DOC;
   expressApi.generateVariation = async () => { throw new Error('generateVariation failed 500: boom'); };
@@ -191,6 +209,14 @@ test('selectTvModel gives every option a unique id (WhatsApp list rows must not 
   assert.equal(new Set(ids).size, ids.length);
 });
 
+test('selectTvModel keeps every option id within WhatsApp\'s 200-char row id limit (#131009)', () => {
+  const result = expressFlow.selectTvModel('img_1');
+
+  for (const option of result.options) {
+    assert.ok(option.id.length <= 200, `id too long (${option.id.length}): ${option.id}`);
+  }
+});
+
 test('selectTvModel encodes the same fixed productImage/oldPrice/price edits into every option id', () => {
   const result = expressFlow.selectTvModel('img_1');
 
@@ -199,7 +225,7 @@ test('selectTvModel encodes the same fixed productImage/oldPrice/price edits int
     assert.deepEqual(parsed, {
       imageId: 'img_1',
       edits: {
-        productImage: expressFlow.TV_PLACEHOLDER_IMAGE_URL,
+        productImage: expressFlow.TV_PLACEHOLDER_IMAGE_TOKEN,
         oldPrice: 33999,
         price: 27199,
       },
