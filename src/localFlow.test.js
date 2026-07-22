@@ -78,6 +78,41 @@ test('createDesign with includeAddress sends the with-address (final) image', as
   assert.match(sent[0].caption, /store address/);
 });
 
+test('createDesign streams progress messages (products + address) before the image', async () => {
+  useFixture();
+  process.env.GEN_STEP_DELAY_MS = '0'; // no real pause in tests
+  const texts = [];
+  const sendText = async (_to, msg) => texts.push(msg);
+  const { sendImage, sent } = captureSendImage();
+
+  await localFlow.createDesign(
+    'onam-stream-1',
+    { occasion: 'Onam', products: ['Samsung Galaxy S26', 'Galaxy Buds 3'], offer: '20% off', includeAddress: true },
+    { sendImage, sendText }
+  );
+
+  assert.ok(texts.length >= 4, 'streams several progress messages');
+  assert.ok(texts.some((m) => /Samsung Galaxy S26 \+ Galaxy Buds 3/.test(m)), 'names the products');
+  assert.ok(texts.some((m) => /store address/i.test(m)), 'mentions the address step');
+  assert.equal(sent[0].link, FIXTURE.images.final); // image sent after the stream
+});
+
+test('editGraphic streams Malayalam progress before sending the Malayalam image', async () => {
+  process.env.GEN_STEP_DELAY_MS = '0';
+  const { image } = await setup('onam-stream-2');
+  const texts = [];
+  const sent = [];
+  const sendText = async (_to, msg) => texts.push(msg);
+
+  await localFlow.editGraphic('onam-stream-2', image, { language: 'Malayalam' }, {
+    sendImage: async (_t, l, c) => sent.push({ link: l, caption: c }),
+    sendText,
+  });
+
+  assert.ok(texts.some((m) => /Malayalam/i.test(m)), 'streams a Malayalam progress message');
+  assert.equal(sent.at(-1).link, FIXTURE.images.malayalam);
+});
+
 test('checkAllowedEdits lists the editable slots from the static schema', async () => {
   const { image } = await setup('onam-phone-check');
 

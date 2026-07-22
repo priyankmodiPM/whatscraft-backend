@@ -43,14 +43,14 @@ async function actionCheckAllowedEdits(phoneNumber, imageId) {
 }
 
 // Router: resolve the image, then hand off to the flow that owns it.
-async function actionEditGraphic(phoneNumber, imageId, edits, { sendImage }) {
+async function actionEditGraphic(phoneNumber, imageId, edits, { sendImage, sendText }) {
   const image = findTrackedImage(phoneNumber, imageId);
   console.log('[action:edit_graphic]', { phoneNumber, imageId, source: image?.source ?? 'not_found', edits });
   if (!image) return formatUnknownImageMessage(phoneNumber);
 
   return image.source === 'local'
-    ? localFlow.editGraphic(phoneNumber, image, edits, { sendImage })
-    : expressFlow.editGraphic(phoneNumber, image, edits, { sendImage });
+    ? localFlow.editGraphic(phoneNumber, image, edits, { sendImage, sendText })
+    : expressFlow.editGraphic(phoneNumber, image, edits, { sendImage, sendText });
 }
 
 async function actionGenerateBulkGraphics(filename) {

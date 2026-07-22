@@ -64,7 +64,7 @@ async function checkAllowedEdits(image) {
 }
 
 // Apply edits via the real Adobe Express generate-variation pipeline.
-async function editGraphic(phoneNumber, image, edits, { sendImage }) {
+async function editGraphic(phoneNumber, image, edits, { sendImage, sendText }) {
   let elements;
   try {
     const doc = await expressApi.getTaggedDocument(image.docId);
@@ -92,6 +92,8 @@ async function editGraphic(phoneNumber, image, edits, { sendImage }) {
   if (oversizedDiscountKeys.length > 0) {
     return `The maximum discount I can apply on "${image.name}" is ${MAX_DISCOUNT_PERCENT}%. Try again with ${MAX_DISCOUNT_PERCENT}% or less.`;
   }
+
+  if (typeof sendText === 'function') await sendText(phoneNumber, '⏳ Applying your edit and re-rendering with Adobe Express…');
 
   const mergedEdits = { ...image.currentEdits, ...edits };
   const pages = expressApi.pagesForEdits(elements, Object.keys(mergedEdits));

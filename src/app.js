@@ -325,8 +325,8 @@ app.post('/', async (req, res) => {
           break;
 
         case 'create_design':
-          await sendText(phoneNumber, '🎨 Creating your design, this may take a moment...');
-          replyText = await actionCreateDesign(phoneNumber, args, { sendImage });
+          // Progress is streamed from inside the flow (with the product/offer context).
+          replyText = await actionCreateDesign(phoneNumber, args, { sendImage, sendText });
           break;
 
         case 'ask_for_more_information':
@@ -362,8 +362,8 @@ app.post('/', async (req, res) => {
         }
 
         case 'edit_graphic':
-          await sendText(phoneNumber, '⏳ Applying edits to your graphic...');
-          replyText = await actionEditGraphic(phoneNumber, args.image_id, args.edits, { sendImage });
+          // Progress is streamed from inside the flow.
+          replyText = await actionEditGraphic(phoneNumber, args.image_id, args.edits, { sendImage, sendText });
           break;
 
         case 'generate_bulk_graphics':
