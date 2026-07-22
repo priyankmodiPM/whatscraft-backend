@@ -8,6 +8,7 @@ const {
   actionEditGraphic,
   actionGenerateBulkGraphics,
   actionSelectTvModel,
+  buildTopLevelEditOptions,
 } = require('./actions');
 const { parseEditOptionId, messageTextForInteractiveReply } = require('./interactiveReply');
 
@@ -229,10 +230,18 @@ const tools = [
 
 // ── GPT decision engine ──────────────────────────────────────────────────────
 
+function formatCurrentEdits(currentEdits) {
+  const entries = Object.entries(currentEdits || {});
+  if (entries.length === 0) return '';
+  return ` (${entries.map(([key, value]) => `${key}: ${value}`).join(', ')})`;
+}
+
 async function decideAction(phoneNumber, userMessage) {
   const last3 = getHistory(phoneNumber).slice(-3);
   const trackedImages = getTrackedImages(phoneNumber);
-  const imagesList = trackedImages.map((image) => `- ${image.id}: ${image.name}`).join('\n');
+  const imagesList = trackedImages
+    .map((image) => `- ${image.id}: ${image.name}${formatCurrentEdits(image.currentEdits)}`)
+    .join('\n');
 
   const messages = [
     {
@@ -246,6 +255,11 @@ If the user wants a brand-new creative for an occasion that has no existing temp
 Choosing between edit_graphic and check_allowed_edits: if the user's message already contains a concrete change and its value (e.g. "make the background marigold", "add my address MG Road Kochi"), call edit_graphic with all of those changes in the edits object. Only call check_allowed_edits when the user asks what can be changed or wants the list of options WITHOUT giving a specific value.
 When editing, prefer these field names when they apply: headline, background, address, offer.
 If the user asks to translate a tag's text into another language (e.g. "change the headline to Hindi", "translate the banner to Malayalam"), translate the current text yourself before calling edit_graphic and pass the translated text as the edit value. For Hindi, use Devanagari script (e.g. "उपलब्ध"); for Malayalam, use Malayalam script (e.g. "ഓണം"). Never use a romanized/transliterated form.
+When the user taps a menu option for "product", "discount", or "price" (from the fixed Edit Product/Edit Discount/Edit Price menu on an Express-catalog graphic):
+- "product": call select_tv_model.
+- "discount" or "price" with no value given yet: call ask_for_more_information asking what they'd like the new discount or price to be.
+- "discount" WITH a value (a percentage, in English, Hindi, or Hinglish — e.g. "50%", "discount ko 50% kar do", "40% off"): compute the new price yourself as oldPrice × (1 − discountPercent / 100), rounded to the nearest whole number, using the oldPrice shown in the images list below, then call edit_graphic with only { "price": <computed value> } — never change oldPrice.
+- "price" WITH a value: call edit_graphic with { "price": <value> } directly, no computation needed.
 
 Images previously sent to this user (reference by id):
 ${imagesList}`,
@@ -266,6 +280,28 @@ ${imagesList}`,
   });
 
   return response.choices[0].message;
+}
+
+// Turns a structured edit outcome into the actual WhatsApp reply text, matching
+// the user's language/style (English or Hinglish) rather than a fixed template.
+async function phraseOutcome(phoneNumber, userMessage, outcome) {
+  const response = await openai.chat.completions.create({
+    model: openaiModel,
+    messages: [
+      {
+        role: 'system',
+        content: `You are a WhatsApp assistant. Given the outcome below, write a short reply to the user. Match the user's language and style — if their message was Hinglish (romanized Hindi mixed with English), reply in Hinglish; otherwise reply in English. Don't invent facts beyond the outcome given.
+
+Examples of the tone/style to match:
+- Success (English): "I have updated product, with price & discount"
+- Success (Hinglish): "Maine discount aur price updated kar diya hai"
+- Capped (Hinglish): "Iss product pr maximum 40% discount de sakte hain"`,
+      },
+      { role: 'user', content: `User message: ${userMessage}\nOutcome: ${JSON.stringify(outcome)}` },
+    ],
+  });
+
+  return response.choices[0].message.content;
 }
 
 // ── Webhook routes ───────────────────────────────────────────────────────────
@@ -353,10 +389,19 @@ app.post('/', async (req, res) => {
           break;
         }
 
-        case 'edit_graphic':
+        case 'edit_graphic': {
           await sendText(phoneNumber, '⏳ Applying edits to your graphic...');
-          replyText = await actionEditGraphic(phoneNumber, args.image_id, args.edits, { sendImage });
+          const result = await actionEditGraphic(phoneNumber, args.image_id, args.edits, { sendImage });
+          if (typeof result === 'string') {
+            replyText = result;
+          } else {
+            replyText = await phraseOutcome(phoneNumber, userText, result);
+            await sendText(phoneNumber, replyText);
+            await sendEditOptions(phoneNumber, buildTopLevelEditOptions(args.image_id));
+            skipSend = true;
+          }
           break;
+        }
 
         case 'generate_bulk_graphics':
           await sendText(phoneNumber, '⏳ Generating graphics from your file, this may take a moment...');
