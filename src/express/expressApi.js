@@ -1,4 +1,7 @@
 const { buildAuthHeaders } = require('./expressAuth');
+// Presentation helpers live in a shared module; re-exported here for backward
+// compatibility with existing callers/tests.
+const { formatAllowedEdits, buildEditOptions } = require('../editOptions');
 
 function apiBaseUrl() {
   return process.env.EXPRESS_API_BASE_URL || 'https://express-api.adobe.io';
@@ -67,43 +70,6 @@ function collectTaggedElements(taggedDocument) {
     }
   }
   return elements;
-}
-
-function formatAllowedEdits(name, elements, { includeInstruction = true } = {}) {
-  const lines = elements.map((element) =>
-    element.type === 'text'
-      ? `- ${element.name}: currently "${element.value}"`
-      : `- ${element.name} (${element.type})`
-  );
-  let text = `Edits allowed on "${name}":\n${lines.join('\n')}`;
-  if (includeInstruction) {
-    const example = elements[0]?.name || 'a field';
-    text += `\nTell me what you'd like to change and to what, e.g. "change ${example} to ...".`;
-  }
-  return text;
-}
-
-function humanizeFieldName(name) {
-  return name
-    .replace(/_/g, ' ')
-    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
-    .toLowerCase();
-}
-
-// WhatsApp reply-button titles are capped at 20 characters; trim on a word boundary
-// rather than cutting mid-word.
-function truncateTitle(title, maxLength = 20) {
-  if (title.length <= maxLength) return title;
-  const truncated = title.slice(0, maxLength);
-  const lastSpace = truncated.lastIndexOf(' ');
-  return lastSpace > 0 ? truncated.slice(0, lastSpace) : truncated;
-}
-
-function buildEditOptions(elements, imageId) {
-  return elements.map((element) => ({
-    id: `edit:${imageId}:${element.name}`,
-    title: truncateTitle(`Change ${humanizeFieldName(element.name)}`),
-  }));
 }
 
 function pagesForEdits(elements, editKeys) {
