@@ -1,5 +1,10 @@
 const { getTrackedImages, findTrackedImage, recordEdits } = require('./imageStore');
 const expressApi = require('./express/expressApi');
+const { buildValueEditId } = require('./interactiveReply');
+
+const TV_PLACEHOLDER_IMAGE_URL = 'https://s7ap1.scene7.com/is/image/healthmonitor/SonyTv?wid=1000';
+const TV_MODEL_TITLES = ['Sony Bravia K-75', 'LG UA82 AI', 'Samsung UA4'];
+const TV_MODEL_EDITS = { productImage: TV_PLACEHOLDER_IMAGE_URL, oldPrice: 33999, price: 27199 };
 
 function formatUnknownImageMessage(phoneNumber) {
   const images = getTrackedImages(phoneNumber);
@@ -49,6 +54,17 @@ async function actionCheckAllowedEdits(phoneNumber, imageId) {
     console.error('[actionCheckAllowedEdits] Express API error', { docId: image.docId, message: err.message });
     return `Sorry, I couldn't check the allowed edits for "${image.name}" right now. Please try again in a moment.`;
   }
+}
+
+function actionSelectTvModel(imageId) {
+  return {
+    type: 'edit_options',
+    bodyText: 'Which model would you like to use?',
+    options: TV_MODEL_TITLES.map((title) => ({
+      id: buildValueEditId(imageId, TV_MODEL_EDITS),
+      title,
+    })),
+  };
 }
 
 async function actionEditGraphic(phoneNumber, imageId, edits, { sendImage }) {
@@ -123,4 +139,5 @@ module.exports = {
   actionCheckAllowedEdits,
   actionEditGraphic,
   actionGenerateBulkGraphics,
+  actionSelectTvModel,
 };
