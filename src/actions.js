@@ -168,6 +168,24 @@ async function editLocalDesign(phoneNumber, image, rawEdits, { sendImage }) {
   return `Updated "${image.name}":\n${summary}`;
 }
 
+const TOP_LEVEL_EDIT_FIELDS = [
+  { fieldName: 'product', title: 'Edit Product' },
+  { fieldName: 'discount', title: 'Edit Discount' },
+  { fieldName: 'price', title: 'Edit Price' },
+];
+
+function buildTopLevelEditOptions(imageId) {
+  return {
+    type: 'edit_options',
+    bodyText: 'What would you like to change?',
+    options: TOP_LEVEL_EDIT_FIELDS.map(({ fieldName, title }) => ({
+      id: `edit:${imageId}:${fieldName}`,
+      title,
+    })),
+    historyText: 'What would you like to change? (Edit Product / Edit Discount / Edit Price)',
+  };
+}
+
 async function actionCheckAllowedEdits(phoneNumber, imageId) {
   const image = findTrackedImage(phoneNumber, imageId);
   console.log('[action:check_allowed_edits]', { phoneNumber, imageId, source: image?.source ?? 'not_found' });
@@ -175,30 +193,17 @@ async function actionCheckAllowedEdits(phoneNumber, imageId) {
     return formatUnknownImageMessage(phoneNumber);
   }
 
-  if (image.source === 'local') {
-    const elements = localEditElements(image);
-    return {
-      type: 'edit_options',
-      bodyText: 'What would you like to change?',
-      options: expressApi.buildEditOptions(elements, imageId),
-      historyText: expressApi.formatAllowedEdits(image.name, elements),
-    };
+  if (image.source === 'express') {
+    return buildTopLevelEditOptions(imageId);
   }
 
-  try {
-    const doc = await expressApi.getTaggedDocument(image.docId);
-    const elements = expressApi.collectTaggedElements(doc);
-    const elementsWithCurrentEdits = withCurrentEdits(elements, image.currentEdits);
-    return {
-      type: 'edit_options',
-      bodyText: 'What would you like to change?',
-      options: expressApi.buildEditOptions(elementsWithCurrentEdits, imageId),
-      historyText: expressApi.formatAllowedEdits(image.name, elementsWithCurrentEdits),
-    };
-  } catch (err) {
-    console.error('[actionCheckAllowedEdits] Express API error', { docId: image.docId, message: err.message });
-    return `Sorry, I couldn't check the allowed edits for "${image.name}" right now. Please try again in a moment.`;
-  }
+  const elements = localEditElements(image);
+  return {
+    type: 'edit_options',
+    bodyText: 'What would you like to change?',
+    options: expressApi.buildEditOptions(elements, imageId),
+    historyText: expressApi.formatAllowedEdits(image.name, elements),
+  };
 }
 
 function actionSelectTvModel(imageId) {
@@ -303,4 +308,5 @@ module.exports = {
   actionEditGraphic,
   actionGenerateBulkGraphics,
   actionSelectTvModel,
+  buildTopLevelEditOptions,
 };

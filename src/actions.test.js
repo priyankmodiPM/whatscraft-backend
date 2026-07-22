@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const os = require('node:os');
-const { actionCheckAllowedEdits, actionEditGraphic, actionSelectTvModel } = require('./actions');
+const { actionCheckAllowedEdits, actionEditGraphic, actionSelectTvModel, buildTopLevelEditOptions } = require('./actions');
 const expressApi = require('./express/expressApi');
 const { findTrackedImage, recordEdits } = require('./imageStore');
 const { parseEditOptionId } = require('./interactiveReply');
@@ -26,30 +26,33 @@ const SAMPLE_ELEMENTS_DOC = {
   ],
 };
 
-test('actionCheckAllowedEdits lists the tagged elements for a known image', async () => {
+test('actionCheckAllowedEdits returns the fixed Edit Product/Discount/Price menu for an Express-catalog image, without calling the Express API', async () => {
   writeFixtureCatalog([{ id: 'img_1', name: 'Croma Earbuds', docId: 'urn:doc:1' }]);
-  expressApi.getTaggedDocument = async (docId) => {
-    assert.equal(docId, 'urn:doc:1');
-    return SAMPLE_ELEMENTS_DOC;
-  };
+  expressApi.getTaggedDocument = async () => { throw new Error('should not be called'); };
 
   const reply = await actionCheckAllowedEdits('phone-1', 'img_1');
 
-  assert.match(reply.historyText, /Croma Earbuds/);
-  assert.match(reply.historyText, /heading: currently "The X-Phone Pro is here!"/);
-  assert.match(reply.historyText, /cta: currently/);
+  assert.equal(reply.type, 'edit_options');
+  assert.equal(reply.bodyText, 'What would you like to change?');
+  assert.deepEqual(reply.options, [
+    { id: 'edit:img_1:product', title: 'Edit Product' },
+    { id: 'edit:img_1:discount', title: 'Edit Discount' },
+    { id: 'edit:img_1:price', title: 'Edit Price' },
+  ]);
+  assert.match(reply.historyText, /Edit Product/);
 });
 
-test('actionCheckAllowedEdits shows the latest edited value instead of the stale original document value', async () => {
-  writeFixtureCatalog([{ id: 'img_1', name: 'Croma Earbuds', docId: 'urn:doc:1' }]);
-  expressApi.getTaggedDocument = async () => SAMPLE_ELEMENTS_DOC;
-  recordEdits('phone-1b', 'img_1', { cta: '20% off' });
+test('buildTopLevelEditOptions ids parse back to the "product"/"discount"/"price" bare fields', () => {
+  const { options } = buildTopLevelEditOptions('img_1');
 
-  const reply = await actionCheckAllowedEdits('phone-1b', 'img_1');
-
-  assert.match(reply.historyText, /cta: currently "20% off"/);
-  assert.doesNotMatch(reply.historyText, /Available at our store starting 15 Aug 20XX\./);
-  assert.match(reply.historyText, /heading: currently "The X-Phone Pro is here!"/);
+  assert.deepEqual(
+    options.map((option) => parseEditOptionId(option.id)),
+    [
+      { imageId: 'img_1', fieldName: 'product' },
+      { imageId: 'img_1', fieldName: 'discount' },
+      { imageId: 'img_1', fieldName: 'price' },
+    ]
+  );
 });
 
 test('actionCheckAllowedEdits reports unknown images without throwing', async () => {
@@ -58,17 +61,6 @@ test('actionCheckAllowedEdits reports unknown images without throwing', async ()
   const reply = await actionCheckAllowedEdits('phone-2', 'img_nope');
 
   assert.match(reply, /couldn't find that image/);
-});
-
-test('actionCheckAllowedEdits returns a friendly message when the Express API call fails', async () => {
-  writeFixtureCatalog([{ id: 'img_1', name: 'Croma Earbuds', docId: 'urn:doc:1' }]);
-  expressApi.getTaggedDocument = async () => {
-    throw new Error('getTaggedDocument failed 500: boom');
-  };
-
-  const reply = await actionCheckAllowedEdits('phone-3', 'img_1');
-
-  assert.match(reply, /couldn't check the allowed edits/);
 });
 
 test('actionEditGraphic returns a disallowed_fields status and makes no generate call for a field outside the tagged elements', async () => {
