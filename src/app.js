@@ -6,6 +6,7 @@ const {
   actionCheckAllowedEdits,
   actionEditGraphic,
   actionGenerateBulkGraphics,
+  actionSelectTvModel,
 } = require('./actions');
 const { parseEditOptionId, messageTextForInteractiveReply } = require('./interactiveReply');
 
@@ -128,6 +129,21 @@ const tools = [
         type: 'object',
         properties: {
           image_id: { type: 'string', description: 'The id of the image the user is asking about, from the tracked images list' },
+        },
+        required: ['image_id'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'select_tv_model',
+      description:
+        'Use when the user asks to change or set the product in a graphic to a TV, without specifying which model. Do not use this for edits to text fields or other product types — use edit_graphic for those.',
+      parameters: {
+        type: 'object',
+        properties: {
+          image_id: { type: 'string', description: 'The id of the image to edit, from the tracked images list' },
         },
         required: ['image_id'],
       },
@@ -273,6 +289,14 @@ app.post('/', async (req, res) => {
             replyText = result.historyText;
             skipSend = true;
           }
+          break;
+        }
+
+        case 'select_tv_model': {
+          const result = actionSelectTvModel(args.image_id);
+          await sendEditOptions(phoneNumber, result);
+          replyText = result.bodyText;
+          skipSend = true;
           break;
         }
 
