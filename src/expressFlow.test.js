@@ -184,6 +184,13 @@ test('selectTvModel returns the 3 fixed TV model options with a list-picker body
   );
 });
 
+test('selectTvModel gives every option a unique id (WhatsApp list rows must not repeat ids)', () => {
+  const result = expressFlow.selectTvModel('img_1');
+
+  const ids = result.options.map((option) => option.id);
+  assert.equal(new Set(ids).size, ids.length);
+});
+
 test('selectTvModel encodes the same fixed productImage/oldPrice/price edits into every option id', () => {
   const result = expressFlow.selectTvModel('img_1');
 

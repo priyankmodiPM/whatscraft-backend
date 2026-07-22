@@ -69,7 +69,9 @@ function impliesExcessiveDiscount(mergedEdits, requestedKeys) {
 }
 
 // TV model picker — each option id encodes the full productImage/price edits so a
-// tap tells GPT exactly what to apply (see interactiveReply.buildValueEditId).
+// tap tells GPT exactly what to apply (see interactiveReply.buildValueEditId). All 3
+// models share the same placeholder edits, so the title is passed as a discriminator
+// to keep the 3 row ids unique — WhatsApp rejects list messages with duplicate row ids.
 // Presented as a WhatsApp list (buttonText set) rather than reply buttons.
 function selectTvModel(imageId) {
   return {
@@ -77,7 +79,7 @@ function selectTvModel(imageId) {
     bodyText: 'Which product do you want?',
     buttonText: 'Choose product',
     options: TV_MODEL_TITLES.map((title) => ({
-      id: buildValueEditId(imageId, TV_MODEL_EDITS),
+      id: buildValueEditId(imageId, TV_MODEL_EDITS, title),
       title,
     })),
   };
