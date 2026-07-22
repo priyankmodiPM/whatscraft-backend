@@ -196,11 +196,12 @@ test('actionEditGraphic applies a price edit at exactly the 40% cap (within roun
   assert.deepEqual(result.changes, { price: 20399 });
 });
 
-test('actionSelectTvModel returns the 3 fixed TV model options with the question body text', () => {
+test('actionSelectTvModel returns the 3 fixed TV model options with a list-picker body text and button', () => {
   const result = actionSelectTvModel('img_1');
 
   assert.equal(result.type, 'edit_options');
-  assert.equal(result.bodyText, 'Which model would you like to use?');
+  assert.equal(result.bodyText, 'Which product do you want?');
+  assert.equal(result.buttonText, 'Choose product');
   assert.equal(result.options.length, 3);
   assert.deepEqual(
     result.options.map((option) => option.title),

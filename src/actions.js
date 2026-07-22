@@ -209,7 +209,8 @@ async function actionCheckAllowedEdits(phoneNumber, imageId) {
 function actionSelectTvModel(imageId) {
   return {
     type: 'edit_options',
-    bodyText: 'Which model would you like to use?',
+    bodyText: 'Which product do you want?',
+    buttonText: 'Choose product',
     options: TV_MODEL_TITLES.map((title) => ({
       id: buildValueEditId(imageId, TV_MODEL_EDITS),
       title,
