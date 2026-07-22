@@ -131,7 +131,8 @@ if (oldPriceKey && newPriceKey && requestedKeys.includes(newPriceKey)) {
   const oldPrice = Number(mergedEdits[oldPriceKey]);
   const newPrice = Number(mergedEdits[newPriceKey]);
   const impliedDiscountPercent = ((oldPrice - newPrice) / oldPrice) * 100;
-  if (impliedDiscountPercent > MAX_DISCOUNT_PERCENT) {
+  const ROUNDING_TOLERANCE_PERCENT = 0.5;
+  if (impliedDiscountPercent > MAX_DISCOUNT_PERCENT + ROUNDING_TOLERANCE_PERCENT) {
     return { status: 'discount_capped', productName: image.name, maxPercent: MAX_DISCOUNT_PERCENT };
   }
 }
@@ -139,7 +140,7 @@ if (oldPriceKey && newPriceKey && requestedKeys.includes(newPriceKey)) {
 
 This replaces the existing `oversizedDiscountKeys` literal-field check (kept as a fallback for any future literal `discount_text`-style field, unchanged logic there).
 
-Boundary case: exactly 40% is allowed (matches the script: 33999 × 0.6 = 20399.4 → rounds to 20399, exactly a 40.0% discount, and step 11 shows this succeeding).
+Boundary case: exactly 40% is allowed. Note that rounding the computed price to a whole number introduces sub-percent noise — e.g. 33999 × 0.6 = 20399.4, and whichever way GPT rounds that (20399 or 20400), the *implied* discount off the resulting whole-rupee price is 40.0012% or 39.9988%, never exactly 40.0000%. The cap check therefore compares against `MAX_DISCOUNT_PERCENT + 0.5` (a half-point rounding tolerance), not a strict `> 40`, so whole-rupee rounding on either side of the requested percentage never flips a legitimate at-cap request into a rejection. A genuinely excessive ask (e.g. 50%) is far outside this tolerance and still rejected.
 
 ## 5. Structured outcomes + dynamic, language-mirrored replies
 
