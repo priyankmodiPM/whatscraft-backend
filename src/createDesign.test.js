@@ -83,6 +83,50 @@ test('a Malayalam headline resolves to the Malayalam image', async () => {
   assert.equal(sent.at(-1), FIXTURE.images.malayalam);
 });
 
+test('adding only a store address resolves to the final image (demo msg 2)', async () => {
+  useFixture();
+  const { sendImage, sent } = captureSendImage();
+  await actionCreateDesign('onam-phone-a', { occasion: 'Onam' }, { sendImage });
+
+  await actionEditGraphic('onam-phone-a', 'local_1', { address: 'Princess Street, Kochi' }, { sendImage });
+
+  assert.equal(sent.at(-1), FIXTURE.images.final);
+});
+
+test('a translate request under an unrecognized key still resolves to Malayalam (demo msg 3)', async () => {
+  useFixture();
+  const { sendImage, sent } = captureSendImage();
+  await actionCreateDesign('onam-phone-b', { occasion: 'Onam' }, { sendImage });
+
+  // model phrases it as a language change rather than a headline edit
+  const reply = await actionEditGraphic('onam-phone-b', 'local_1', { language: 'Malayalam' }, { sendImage });
+
+  assert.equal(sent.at(-1), FIXTURE.images.malayalam);
+  assert.doesNotMatch(reply, /locked by HQ/);
+});
+
+test('a Malayalam value under any key resolves to Malayalam', async () => {
+  useFixture();
+  const { sendImage, sent } = captureSendImage();
+  await actionCreateDesign('onam-phone-c', { occasion: 'Onam' }, { sendImage });
+
+  await actionEditGraphic('onam-phone-c', 'local_1', { banner: 'ഓണം ആശംസകൾ' }, { sendImage });
+
+  assert.equal(sent.at(-1), FIXTURE.images.malayalam);
+});
+
+test('a Malayalam value landing on the background key translates, not palette-rejected (regression)', async () => {
+  useFixture();
+  const { sendImage, sent } = captureSendImage();
+  await actionCreateDesign('onam-phone-d', { occasion: 'Onam' }, { sendImage });
+
+  // model mistakenly puts the translated word on a "background"-like key
+  const reply = await actionEditGraphic('onam-phone-d', 'local_1', { background: 'ഓണം' }, { sendImage });
+
+  assert.equal(sent.at(-1), FIXTURE.images.malayalam);
+  assert.doesNotMatch(reply, /approved palette/);
+});
+
 test('editing a locked element on a created design is refused', async () => {
   useFixture();
   const { sendImage } = captureSendImage();

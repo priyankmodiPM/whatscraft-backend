@@ -89,9 +89,14 @@ function hasMalayalam(value) {
 }
 
 // Pick the canned image for the current accumulated edit state.
+function isMalayalamEdit(currentEdits) {
+  return Object.entries(currentEdits).some(([key, value]) =>
+    hasMalayalam(String(value)) || (key === 'language' && /malayalam/i.test(String(value)))
+  );
+}
+
 function resolveLocalImage(design, currentEdits) {
-  const values = Object.values(currentEdits);
-  if (values.some(hasMalayalam)) return design.images.malayalam;
+  if (isMalayalamEdit(currentEdits)) return design.images.malayalam;
   if (currentEdits.background || currentEdits.address) return design.images.final;
   return design.images.base;
 }
@@ -107,24 +112,44 @@ function localEditElements(image) {
 async function editLocalDesign(phoneNumber, image, rawEdits, { sendImage }) {
   const design = image.design;
   const editableSlots = design.slots.editable;
-  const { canonical: edits, unknown } = canonicalizeEdits(editableSlots, rawEdits);
 
-  if (unknown.length > 0) {
-    const editableNames = editableSlots.map((s) => s.name).join(', ');
-    return `I can't edit ${unknown.join(', ')} on "${image.name}" — those are locked by HQ. You can change: ${editableNames}.`;
+  // Translation is special: the model may pass the Malayalam text (or the word
+  // "Malayalam") under any key. Detect it up front so a "translate to Malayalam"
+  // request always maps to the Malayalam creative, regardless of the edit key.
+  const rawText = Object.entries(rawEdits || {}).flat().map(String);
+  const wantsMalayalam = rawText.some(hasMalayalam) || rawText.some((s) => /malayalam/i.test(s));
+
+  // A translation request short-circuits everything: map straight to the
+  // Malayalam creative. Never treat it as a field edit or run it through the
+  // palette / locked-field guardrails (the model may put the Malayalam text on
+  // any key, including one that looks like "background").
+  let appliedEdits;
+  if (wantsMalayalam) {
+    appliedEdits = { language: 'Malayalam' };
+  } else {
+    const { canonical: edits, unknown } = canonicalizeEdits(editableSlots, rawEdits);
+
+    if (unknown.length > 0) {
+      const editableNames = editableSlots.map((s) => s.name).join(', ');
+      return `I can't edit ${unknown.join(', ')} on "${image.name}" — those are locked by HQ. You can change: ${editableNames}.`;
+    }
+
+    if ('background' in edits && !isPaletteColor(design, edits.background)) {
+      const options = design.palette.map((c) => c.name).join(' · ');
+      return `"${edits.background}" isn't in the approved palette 🙂 Here are the festive accents you can pick from: ${options}`;
+    }
+
+    appliedEdits = edits;
   }
 
-  if ('background' in edits && !isPaletteColor(design, edits.background)) {
-    const options = design.palette.map((c) => c.name).join(' · ');
-    return `"${edits.background}" isn't in the approved palette 🙂 Here are the festive accents you can pick from: ${options}`;
-  }
-
-  recordEdits(phoneNumber, image.id, edits);
-  const currentEdits = { ...image.currentEdits, ...edits };
+  recordEdits(phoneNumber, image.id, appliedEdits);
+  const currentEdits = { ...image.currentEdits, ...appliedEdits };
   const imageUrl = resolveLocalImage(design, currentEdits);
   console.log('[edit:local] resolved image', { imageId: image.id, currentEdits, imageUrl });
 
-  const summary = Object.entries(edits).map(([key, value]) => `• ${key}: ${value}`).join('\n');
+  const summary = wantsMalayalam
+    ? '• translated to Malayalam'
+    : Object.entries(appliedEdits).map(([key, value]) => `• ${key}: ${value}`).join('\n');
 
   try {
     await sendImage(phoneNumber, imageUrl);
