@@ -199,7 +199,7 @@ test('selectTvModel encodes the same fixed productImage/oldPrice/price edits int
     assert.deepEqual(parsed, {
       imageId: 'img_1',
       edits: {
-        productImage: 'https://s7ap1.scene7.com/is/image/healthmonitor/SonyTv?wid=1000',
+        productImage: expressFlow.TV_PLACEHOLDER_IMAGE_URL,
         oldPrice: 33999,
         price: 27199,
       },
