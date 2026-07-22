@@ -80,13 +80,35 @@ function sendButtons(to, bodyText, options) {
   });
 }
 
+// WhatsApp list messages: a single "menu" button plus up to 10 rows in one section.
+function sendList(to, { bodyText, buttonText, options }) {
+  return whatsappPost({
+    messaging_product: 'whatsapp',
+    to,
+    type: 'interactive',
+    interactive: {
+      type: 'list',
+      body: { text: bodyText },
+      action: {
+        button: buttonText,
+        sections: [{ rows: options.map((option) => ({ id: option.id, title: option.title })) }],
+      },
+    },
+  });
+}
+
 // WhatsApp reply-button messages cap out at 3 buttons, so options beyond that
 // go out as additional button messages rather than falling back to a list picker.
 const BUTTONS_PER_MESSAGE = 3;
 
-async function sendEditOptions(to, { bodyText, options }) {
+async function sendEditOptions(to, result) {
+  const { bodyText, options, buttonText } = result;
   if (options.length === 0) {
     await sendText(to, bodyText);
+    return;
+  }
+  if (buttonText) {
+    await sendList(to, { bodyText, buttonText, options });
     return;
   }
   for (let i = 0; i < options.length; i += BUTTONS_PER_MESSAGE) {
