@@ -113,15 +113,17 @@ async function editGraphic(phoneNumber, image, edits, { sendImage, sendText }) {
   recordEdits(phoneNumber, image.id, edits);
 
   const summary = Object.entries(edits).map(([key, value]) => `• ${key}: ${value}`).join('\n');
+  // Caption carries the summary so text never arrives before the image.
+  const caption = `Updated "${image.name}":\n${summary}\n\nAnything else you'd like to change?`;
 
   try {
-    await sendImage(phoneNumber, thumbnailUrl);
+    await sendImage(phoneNumber, thumbnailUrl, caption);
   } catch (err) {
     console.error('[expressFlow.editGraphic] sendImage error', { docId: image.docId, message: err.message });
     return `Updated "${image.name}", but I couldn't send the image right now — try asking me to resend it.`;
   }
 
-  return `Updated "${image.name}":\n${summary}`;
+  return { skipSend: true, historyText: caption };
 }
 
 module.exports = { selectTvModel, checkAllowedEdits, editGraphic, MAX_DISCOUNT_PERCENT };

@@ -58,7 +58,9 @@ async function createDesign(phoneNumber, { occasion, products, offer, includeAdd
 
   const offerText = offer ? ` at ${offer}` : '';
   const addressText = includeAddress ? ', with your store address' : '';
-  const caption = `🌼 Happy ${festive}! Here's your festive creative — ${productList}${offerText}${addressText}. On-brand with Croma's logo and approved colours, ready to share. ✨`;
+  // The follow-up prompt lives inside the caption so it never arrives before the
+  // image — WhatsApp delivers link images a beat after plain text.
+  const caption = `🌼 Happy ${festive}! Here's your festive creative — ${productList}${offerText}${addressText}. On-brand with Croma's logo and approved colours, ready to share. ✨\n\nWant to change anything? For example, I can translate the whole banner to Malayalam. 🌸`;
 
   try {
     await sendImage(phoneNumber, imageUrl, caption);
@@ -67,7 +69,7 @@ async function createDesign(phoneNumber, { occasion, products, offer, includeAdd
     return `I built your ${festive} design, but couldn't send the image right now — try asking me to resend it.`;
   }
 
-  return 'Want to change anything? For example, I can translate the whole banner to Malayalam. 🌸';
+  return { skipSend: true, historyText: caption };
 }
 
 function normalizeKey(key) {
@@ -176,9 +178,11 @@ async function editGraphic(phoneNumber, image, rawEdits, { sendImage, sendText }
     : ['✍️ Updating your creative…'];
   await streamProgress(sendText, phoneNumber, progress);
 
-  const caption = wantsMalayalam
+  const summary = wantsMalayalam
     ? '🌸 Here you go — your banner is now in Malayalam!'
     : `✅ Done! Updated ${Object.entries(appliedEdits).map(([key, value]) => `${key} → ${value}`).join(', ')}.`;
+  // Follow-up lives in the caption so it can't arrive before the image.
+  const caption = `${summary}\n\nAnything else you'd like to change?`;
 
   try {
     await sendImage(phoneNumber, imageUrl, caption);
@@ -187,7 +191,7 @@ async function editGraphic(phoneNumber, image, rawEdits, { sendImage, sendText }
     return `I updated "${image.name}", but couldn't send the image right now — try asking me to resend it.`;
   }
 
-  return "Anything else you'd like to change?";
+  return { skipSend: true, historyText: caption };
 }
 
 module.exports = { createDesign, checkAllowedEdits, editGraphic };

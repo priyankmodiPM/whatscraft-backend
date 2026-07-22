@@ -324,10 +324,18 @@ app.post('/', async (req, res) => {
           replyText = await actionListCampaignGraphics();
           break;
 
-        case 'create_design':
+        case 'create_design': {
           // Progress is streamed from inside the flow (with the product/offer context).
-          replyText = await actionCreateDesign(phoneNumber, args, { sendImage, sendText });
+          // On success the flow already sent the image+caption, so skip the extra text.
+          const result = await actionCreateDesign(phoneNumber, args, { sendImage, sendText });
+          if (typeof result === 'string') {
+            replyText = result;
+          } else {
+            replyText = result.historyText;
+            skipSend = true;
+          }
           break;
+        }
 
         case 'ask_for_more_information':
           console.log('[action:ask_for_more_information]', { question: args.question, options: args.options });
@@ -361,10 +369,18 @@ app.post('/', async (req, res) => {
           break;
         }
 
-        case 'edit_graphic':
-          // Progress is streamed from inside the flow.
-          replyText = await actionEditGraphic(phoneNumber, args.image_id, args.edits, { sendImage, sendText });
+        case 'edit_graphic': {
+          // Progress is streamed from inside the flow. On success the flow already
+          // sent the image+caption; a guardrail rejection returns a plain string.
+          const result = await actionEditGraphic(phoneNumber, args.image_id, args.edits, { sendImage, sendText });
+          if (typeof result === 'string') {
+            replyText = result;
+          } else {
+            replyText = result.historyText;
+            skipSend = true;
+          }
           break;
+        }
 
         case 'generate_bulk_graphics':
           await sendText(phoneNumber, '⏳ Generating graphics from your file, this may take a moment...');

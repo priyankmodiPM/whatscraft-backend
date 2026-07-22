@@ -61,7 +61,8 @@ test('createDesign registers a local design and sends the base image with a capt
   assert.equal(sent[0].link, FIXTURE.images.base);
   assert.match(sent[0].caption, /Onam/);
   assert.match(sent[0].caption, /20% off/);
-  assert.match(reply, /change anything/i);
+  assert.match(sent[0].caption, /change anything/i); // follow-up is in the caption, not a separate text
+  assert.equal(reply.skipSend, true);
 });
 
 test('createDesign with includeAddress sends the with-address (final) image', async () => {
@@ -161,10 +162,10 @@ test('adding only a store address resolves to the final image (demo msg 2)', asy
 test('a translate request under an unrecognized key still resolves to Malayalam (demo msg 3)', async () => {
   const { image, sent } = await setup('onam-phone-b');
 
-  const reply = await localFlow.editGraphic('onam-phone-b', image, { language: 'Malayalam' }, { sendImage: async (_t, l, c) => sent.push({ link: l, caption: c }) });
+  await localFlow.editGraphic('onam-phone-b', image, { language: 'Malayalam' }, { sendImage: async (_t, l, c) => sent.push({ link: l, caption: c }) });
 
+  // resolving to the Malayalam image (rather than a "locked by HQ" text) proves it wasn't rejected
   assert.equal(sent.at(-1).link, FIXTURE.images.malayalam);
-  assert.doesNotMatch(reply, /locked by HQ/);
 });
 
 test('a Malayalam value under any key resolves to Malayalam', async () => {
@@ -178,10 +179,10 @@ test('a Malayalam value under any key resolves to Malayalam', async () => {
 test('a Malayalam value landing on the background key translates, not palette-rejected (regression)', async () => {
   const { image, sent } = await setup('onam-phone-d');
 
-  const reply = await localFlow.editGraphic('onam-phone-d', image, { background: 'ഓണം' }, { sendImage: async (_t, l, c) => sent.push({ link: l, caption: c }) });
+  await localFlow.editGraphic('onam-phone-d', image, { background: 'ഓണം' }, { sendImage: async (_t, l, c) => sent.push({ link: l, caption: c }) });
 
+  // resolving to the Malayalam image proves it wasn't palette-rejected
   assert.equal(sent.at(-1).link, FIXTURE.images.malayalam);
-  assert.doesNotMatch(reply, /approved palette/);
 });
 
 test('editing a locked element is refused', async () => {
