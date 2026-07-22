@@ -54,9 +54,9 @@ test('checkAllowedEdits returns the fixed Edit Product/Discount/Price menu, with
   assert.equal(reply.type, 'edit_options');
   assert.equal(reply.bodyText, 'What would you like to change?');
   assert.deepEqual(reply.options, [
-    { id: 'edit:img_1:product', title: 'Edit Product' },
-    { id: 'edit:img_1:discount', title: 'Edit Discount' },
-    { id: 'edit:img_1:price', title: 'Edit Price' },
+    { id: 'edit:img_1:product', title: '🛍️ Edit Product' },
+    { id: 'edit:img_1:discount', title: '🏷️ Edit Discount' },
+    { id: 'edit:img_1:price', title: '💰 Edit Price' },
   ]);
   assert.match(reply.historyText, /Edit Product/);
 });

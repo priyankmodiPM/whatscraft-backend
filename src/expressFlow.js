@@ -38,6 +38,35 @@ function expandPlaceholderEdits(edits) {
   return edits;
 }
 
+function formatINR(amount) {
+  return Number(amount).toLocaleString('en-IN');
+}
+
+// The success caption for img_1 (Croma Diwali offer) — a fixed festive template
+// rather than a GPT-phrased one-liner, so the banner's own promo copy carries
+// through into the message text. Falls back to the TV_MODEL_EDITS constants for
+// price/oldPrice when an edit (e.g. a lone "change price" request) hasn't gone
+// through selectTvModel, so both are always populated.
+function buildDiwaliOfferCaption({ price, oldPrice } = {}) {
+  const displayPrice = formatINR(price ?? TV_MODEL_EDITS.price);
+  const displayOldPrice = formatINR(oldPrice ?? TV_MODEL_EDITS.oldPrice);
+
+  return `🪔✨ DIWALI DHAMAKA OFFER! ✨🪔
+
+🎉 Upgrade your viewing experience this festive season with an amazing deal on the Sony Bravia K-75!
+
+💥 Special Festive Price: ₹${displayPrice}
+Regular Price: ₹${displayOldPrice}
+
+✅ Trusted Sony Quality
+✅ Limited Period Diwali Offer
+✅ Great Savings for Your Family
+
+📞 Contact us today or visit our store before the offer ends!
+
+🎁 Hurry! Stocks are limited. Grab this festive deal now! 🛍️✨`;
+}
+
 const MAX_DISCOUNT_PERCENT = 40;
 const ROUNDING_TOLERANCE_PERCENT = 0.5;
 
@@ -45,9 +74,9 @@ const ROUNDING_TOLERANCE_PERCENT = 0.5;
 // per-document field list; tapping one produces a bare "product"/"discount"/
 // "price" field id via the existing interactive-reply scheme (interactiveReply.js).
 const TOP_LEVEL_EDIT_FIELDS = [
-  { fieldName: 'product', title: 'Edit Product' },
-  { fieldName: 'discount', title: 'Edit Discount' },
-  { fieldName: 'price', title: 'Edit Price' },
+  { fieldName: 'product', title: '🛍️ Edit Product' },
+  { fieldName: 'discount', title: '🏷️ Edit Discount' },
+  { fieldName: 'price', title: '💰 Edit Price' },
 ];
 
 function withCurrentEdits(elements, currentEdits) {
@@ -185,7 +214,10 @@ async function editGraphic(phoneNumber, image, edits, { sendText } = {}) {
 
   recordEdits(phoneNumber, image.id, edits);
 
-  return { status: 'success', productName: image.name, changes: edits, thumbnailUrl };
+  const outcome = { status: 'success', productName: image.name, changes: edits, thumbnailUrl };
+  if (mergedEdits.price !== undefined) outcome.price = mergedEdits.price;
+  if (mergedEdits.oldPrice !== undefined) outcome.oldPrice = mergedEdits.oldPrice;
+  return outcome;
 }
 
 module.exports = {
@@ -193,6 +225,7 @@ module.exports = {
   checkAllowedEdits,
   editGraphic,
   buildTopLevelEditOptions,
+  buildDiwaliOfferCaption,
   MAX_DISCOUNT_PERCENT,
   TV_PLACEHOLDER_IMAGE_URL,
   TV_PLACEHOLDER_IMAGE_TOKEN,

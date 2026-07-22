@@ -9,6 +9,7 @@ const {
   actionGenerateBulkGraphics,
   actionSelectTvModel,
   buildTopLevelEditOptions,
+  buildDiwaliOfferCaption,
 } = require('./actions');
 const { parseEditOptionId, messageTextForInteractiveReply } = require('./interactiveReply');
 
@@ -102,6 +103,17 @@ function sendList(to, { bodyText, buttonText, options }) {
 // WhatsApp reply-button messages cap out at 3 buttons, so options beyond that
 // go out as additional button messages rather than falling back to a list picker.
 const BUTTONS_PER_MESSAGE = 3;
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+// WhatsApp delivers link-image messages a beat after plain text/interactive
+// messages (it has to fetch the image before it can display it), so awaiting
+// sendImage() isn't enough to guarantee the image lands on-device before a
+// message sent right after it. This pause gives the image a head start so the
+// follow-up edit-menu buttons don't arrive first.
+const IMAGE_DELIVERY_DELAY_MS = Number(process.env.IMAGE_DELIVERY_DELAY_MS ?? 1800);
 
 async function sendEditOptions(to, result) {
   const { bodyText, options, buttonText } = result;
@@ -431,23 +443,27 @@ app.post('/', async (req, res) => {
           // Progress is streamed from inside the flow. Local-flow outcomes are
           // either a plain string (guardrail rejection) or {skipSend:true,
           // historyText} (success, image+caption already sent). Express-flow
-          // outcomes are always a structured {status, ...} object — phrased here
-          // to match the user's language, delivered with that phrasing as the
-          // image caption, then followed by the fixed Edit Product/Discount/Price menu.
+          // outcomes are always a structured {status, ...} object. On success,
+          // the image is delivered with the fixed Diwali-offer caption (updated
+          // price baked in); other statuses are phrased to match the user's
+          // language. Either way, the fixed Edit Product/Discount/Price menu
+          // follows — after a short pause so it can't arrive before the image.
           const result = await actionEditGraphic(phoneNumber, args.image_id, args.edits, { sendImage, sendText });
           if (typeof result === 'string') {
             replyText = result;
           } else if (result.status) {
-            replyText = await phraseOutcome(phoneNumber, userText, result);
             if (result.status === 'success') {
+              replyText = buildDiwaliOfferCaption(result);
               try {
                 await sendImage(phoneNumber, result.thumbnailUrl, replyText);
+                await sleep(IMAGE_DELIVERY_DELAY_MS);
               } catch (err) {
                 console.error('[edit_graphic] sendImage error', { message: err.message });
                 replyText = `Updated "${result.productName}", but I couldn't send the image right now — try asking me to resend it.`;
                 await sendText(phoneNumber, replyText);
               }
             } else {
+              replyText = await phraseOutcome(phoneNumber, userText, result);
               await sendText(phoneNumber, replyText);
             }
             await sendEditOptions(phoneNumber, buildTopLevelEditOptions(args.image_id));

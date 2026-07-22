@@ -37,6 +37,12 @@ function buildTopLevelEditOptions(imageId) {
   return expressFlow.buildTopLevelEditOptions(imageId);
 }
 
+// Flow 1 (express/catalog) — the fixed Diwali-offer caption used as the image
+// message text after a successful edit_graphic on img_1.
+function buildDiwaliOfferCaption(result) {
+  return expressFlow.buildDiwaliOfferCaption(result);
+}
+
 // Router: resolve the image, then hand off to the flow that owns it.
 async function actionCheckAllowedEdits(phoneNumber, imageId) {
   const image = findTrackedImage(phoneNumber, imageId);
@@ -73,4 +79,5 @@ module.exports = {
   actionGenerateBulkGraphics,
   actionSelectTvModel,
   buildTopLevelEditOptions,
+  buildDiwaliOfferCaption,
 };
