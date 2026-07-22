@@ -62,6 +62,33 @@ function parsePercent(value) {
   return match ? Number(match[1]) : null;
 }
 
+const ROUNDING_TOLERANCE_PERCENT = 0.5;
+
+function findOldPriceKey(keys) {
+  return keys.find((key) => /^old.?price$/i.test(key));
+}
+
+function findNewPriceKey(keys, oldPriceKey) {
+  return keys.find((key) => key !== oldPriceKey && /(^|_)price$/i.test(key));
+}
+
+// Covers both "discount ko 50% kar do" (GPT computes a price from oldPrice) and a
+// direct "set price to X" request — either way, a price drop of more than the cap
+// (plus rounding slack for whole-rupee prices) is rejected.
+function impliesExcessiveDiscount(mergedEdits, requestedKeys) {
+  const keys = Object.keys(mergedEdits);
+  const oldPriceKey = findOldPriceKey(keys);
+  const newPriceKey = findNewPriceKey(keys, oldPriceKey);
+  if (!oldPriceKey || !newPriceKey || !requestedKeys.includes(newPriceKey)) return false;
+
+  const oldPrice = Number(mergedEdits[oldPriceKey]);
+  const newPrice = Number(mergedEdits[newPriceKey]);
+  if (!Number.isFinite(oldPrice) || oldPrice <= 0 || !Number.isFinite(newPrice)) return false;
+
+  const impliedDiscountPercent = ((oldPrice - newPrice) / oldPrice) * 100;
+  return impliedDiscountPercent > MAX_DISCOUNT_PERCENT + ROUNDING_TOLERANCE_PERCENT;
+}
+
 // ── Local (canned-image) design helpers — Flow 2.2 ───────────────────────────
 
 function normalizeKey(key) {
@@ -208,7 +235,7 @@ async function editExpressDesign(phoneNumber, image, edits, { sendImage }) {
     elements = expressApi.collectTaggedElements(doc);
   } catch (err) {
     console.error('[editExpressDesign] Express API error', { docId: image.docId, message: err.message });
-    return `Sorry, I couldn't reach Adobe Express to apply that edit. Please try again in a moment.`;
+    return { status: 'api_error', productName: image.name, reason: 'lookup_failed' };
   }
 
   const allowedNames = elements.map((element) => element.name);
@@ -217,7 +244,12 @@ async function editExpressDesign(phoneNumber, image, edits, { sendImage }) {
 
   if (disallowedKeys.length > 0) {
     const elementsWithCurrentEdits = withCurrentEdits(elements, image.currentEdits);
-    return `I can't edit ${disallowedKeys.join(', ')} on "${image.name}". ${expressApi.formatAllowedEdits(image.name, elementsWithCurrentEdits)}`;
+    return {
+      status: 'disallowed_fields',
+      productName: image.name,
+      disallowedKeys,
+      allowedSummary: expressApi.formatAllowedEdits(image.name, elementsWithCurrentEdits),
+    };
   }
 
   const oversizedDiscountKeys = requestedKeys.filter((key) => {
@@ -226,11 +258,12 @@ async function editExpressDesign(phoneNumber, image, edits, { sendImage }) {
     return percent !== null && percent > MAX_DISCOUNT_PERCENT;
   });
 
-  if (oversizedDiscountKeys.length > 0) {
-    return `The maximum discount I can apply on "${image.name}" is ${MAX_DISCOUNT_PERCENT}%. Try again with ${MAX_DISCOUNT_PERCENT}% or less.`;
+  const mergedEdits = { ...image.currentEdits, ...edits };
+
+  if (oversizedDiscountKeys.length > 0 || impliesExcessiveDiscount(mergedEdits, requestedKeys)) {
+    return { status: 'discount_capped', productName: image.name, maxPercent: MAX_DISCOUNT_PERCENT };
   }
 
-  const mergedEdits = { ...image.currentEdits, ...edits };
   const pages = expressApi.pagesForEdits(elements, Object.keys(mergedEdits));
   const preferredDocumentName = expressApi.buildPreferredDocumentName(image.name);
 
@@ -242,21 +275,19 @@ async function editExpressDesign(phoneNumber, image, edits, { sendImage }) {
     console.log('[edit:express] resolved image', { imageId: image.id, docId: image.docId, thumbnailUrl });
   } catch (err) {
     console.error('[editExpressDesign] generate/poll error', { docId: image.docId, message: err.message });
-    return `Sorry, something went wrong generating your updated "${image.name}". Please try again.`;
+    return { status: 'api_error', productName: image.name, reason: 'generate_failed' };
   }
 
   recordEdits(phoneNumber, image.id, edits);
-
-  const summary = Object.entries(edits).map(([key, value]) => `• ${key}: ${value}`).join('\n');
 
   try {
     await sendImage(phoneNumber, thumbnailUrl);
   } catch (err) {
     console.error('[editExpressDesign] sendImage error', { docId: image.docId, message: err.message });
-    return `Updated "${image.name}", but I couldn't send the image right now — try asking me to resend it.`;
+    return { status: 'delivery_failed', productName: image.name, changes: edits };
   }
 
-  return `Updated "${image.name}":\n${summary}`;
+  return { status: 'success', productName: image.name, changes: edits };
 }
 
 async function actionGenerateBulkGraphics(filename) {
