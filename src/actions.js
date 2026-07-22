@@ -42,7 +42,7 @@ async function actionCheckAllowedEdits(phoneNumber, imageId) {
     return {
       type: 'edit_options',
       bodyText: 'What would you like to change?',
-      options: expressApi.buildEditOptions(elementsWithCurrentEdits),
+      options: expressApi.buildEditOptions(elementsWithCurrentEdits, imageId),
       historyText: expressApi.formatAllowedEdits(image.name, elementsWithCurrentEdits),
     };
   } catch (err) {

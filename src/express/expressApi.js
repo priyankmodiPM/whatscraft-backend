@@ -99,9 +99,9 @@ function truncateTitle(title, maxLength = 20) {
   return lastSpace > 0 ? truncated.slice(0, lastSpace) : truncated;
 }
 
-function buildEditOptions(elements) {
+function buildEditOptions(elements, imageId) {
   return elements.map((element) => ({
-    id: `edit:${element.name}`,
+    id: `edit:${imageId}:${element.name}`,
     title: truncateTitle(`Change ${humanizeFieldName(element.name)}`),
   }));
 }

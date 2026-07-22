@@ -92,6 +92,23 @@ async function sendEditOptions(to, { bodyText, options }) {
   }
 }
 
+// Edit option button/list-row ids are `edit:${imageId}:${fieldName}` (see
+// expressApi.buildEditOptions). Parse that back out so a tap can tell GPT exactly
+// which image and field the user picked, instead of only the truncated button title.
+function parseEditOptionId(id) {
+  if (typeof id !== 'string' || !id.startsWith('edit:')) return null;
+  const rest = id.slice('edit:'.length);
+  const separatorIndex = rest.indexOf(':');
+  if (separatorIndex === -1) return null;
+  return { imageId: rest.slice(0, separatorIndex), fieldName: rest.slice(separatorIndex + 1) };
+}
+
+function messageTextForInteractiveReply(reply) {
+  const parsed = parseEditOptionId(reply.id);
+  if (!parsed) return reply.title;
+  return `I'd like to change "${parsed.fieldName}" on image ${parsed.imageId}.`;
+}
+
 // ── GPT tool definitions ─────────────────────────────────────────────────────
 
 const tools = [
@@ -180,6 +197,7 @@ async function decideAction(phoneNumber, userMessage) {
 Analyze the user's message and conversation history, then call the appropriate tool.
 Always call exactly one tool — never reply with plain text.
 If the request is ambiguous or missing details, use ask_for_more_information.
+If the user says which field they want to change but hasn't given the new value yet, call ask_for_more_information to ask what to change it to. If a later message in the conversation then supplies that value, call edit_graphic with the field and value instead of asking again.
 If the user asks to translate a tag's text into another language (e.g. "change the headline to Hindi"), translate the current text yourself before calling edit_graphic and pass the translated text as the edit value. For Hindi, the translation must be in Devanagari script (e.g. "उपलब्ध"), not a romanized/transliterated form.
 
 Images previously sent to this user (reference by id):
@@ -232,7 +250,7 @@ app.post('/', async (req, res) => {
       if (message.image) console.log('[webhook] message.image:', JSON.stringify(message.image));
 
       const interactiveReply = message?.interactive?.button_reply || message?.interactive?.list_reply;
-      const userText = message?.text?.body || interactiveReply?.title;
+      const userText = message?.text?.body || (interactiveReply && messageTextForInteractiveReply(interactiveReply));
       if (!userText) continue;
 
       const phoneNumber = message.from;
