@@ -15,22 +15,33 @@ function loadOnamDesign() {
   return JSON.parse(fs.readFileSync(filePath, 'utf8'));
 }
 
-// create_design: register a brand-new local design and send its base image.
-async function createDesign(phoneNumber, { occasion, products, offer } = {}, { sendImage }) {
+// create_design: register a brand-new local design and send its image with a
+// friendly caption. If the user opted to include their address, the creative
+// that carries it is the "final" image (we only ship 2 canned URLs for this flow).
+async function createDesign(phoneNumber, { occasion, products, offer, includeAddress } = {}, { sendImage }) {
   const design = loadOnamDesign();
   const productList = Array.isArray(products) && products.length ? products.join(' + ') : (products || 'your products');
-  const name = [occasion || 'Festive', productList, 'offer'].filter(Boolean).join(' ');
-  console.log('[action:create_design]', { phoneNumber, occasion, products, offer, image: design.images.base });
-  registerDesign(phoneNumber, { name, design });
+  const festive = occasion || 'Festive';
+  const name = [festive, productList, 'offer'].filter(Boolean).join(' ');
+  const image = registerDesign(phoneNumber, { name, design });
+
+  const imageUrl = includeAddress ? design.images.final : design.images.base;
+  if (includeAddress) recordEdits(phoneNumber, image.id, { address: 'your store' });
+
+  console.log('[action:create_design]', { phoneNumber, occasion, products, offer, includeAddress, image: imageUrl });
+
+  const offerText = offer ? ` at ${offer}` : '';
+  const addressText = includeAddress ? ', with your store address' : '';
+  const caption = `🌼 Happy ${festive}! Here's your festive creative — ${productList}${offerText}${addressText}. On-brand with Croma's logo and approved colours, ready to share. ✨`;
 
   try {
-    await sendImage(phoneNumber, design.images.base);
+    await sendImage(phoneNumber, imageUrl, caption);
   } catch (err) {
     console.error('[localFlow.createDesign] sendImage error', { message: err.message });
-    return `I built your ${occasion || 'festive'} design, but couldn't send the image right now — try asking me to resend it.`;
+    return `I built your ${festive} design, but couldn't send the image right now — try asking me to resend it.`;
   }
 
-  return `Here you go 🌼 Built with Croma's logo, approved festive colours and the ${productList} images. Want to tweak anything?`;
+  return 'Want to change anything? For example, I can translate the whole banner to Malayalam. 🌸';
 }
 
 function normalizeKey(key) {
@@ -133,18 +144,18 @@ async function editGraphic(phoneNumber, image, rawEdits, { sendImage }) {
   const imageUrl = resolveLocalImage(design, currentEdits);
   console.log('[edit:local] resolved image', { imageId: image.id, currentEdits, imageUrl });
 
-  const summary = wantsMalayalam
-    ? '• translated to Malayalam'
-    : Object.entries(appliedEdits).map(([key, value]) => `• ${key}: ${value}`).join('\n');
+  const caption = wantsMalayalam
+    ? '🌸 Here you go — your banner is now in Malayalam!'
+    : `✅ Done! Updated ${Object.entries(appliedEdits).map(([key, value]) => `${key} → ${value}`).join(', ')}.`;
 
   try {
-    await sendImage(phoneNumber, imageUrl);
+    await sendImage(phoneNumber, imageUrl, caption);
   } catch (err) {
     console.error('[localFlow.editGraphic] sendImage error', { imageId: image.id, message: err.message });
-    return `Updated "${image.name}", but I couldn't send the image right now — try asking me to resend it.`;
+    return `I updated "${image.name}", but couldn't send the image right now — try asking me to resend it.`;
   }
 
-  return `Updated "${image.name}":\n${summary}`;
+  return "Anything else you'd like to change?";
 }
 
 module.exports = { createDesign, checkAllowedEdits, editGraphic };
