@@ -31,6 +31,12 @@ function actionSelectTvModel(imageId) {
   return expressFlow.selectTvModel(imageId);
 }
 
+// Flow 1 (express/catalog) — the fixed Edit Product/Discount/Price menu, reused
+// by app.js to resurface the menu after every edit outcome on this flow.
+function buildTopLevelEditOptions(imageId) {
+  return expressFlow.buildTopLevelEditOptions(imageId);
+}
+
 // Router: resolve the image, then hand off to the flow that owns it.
 async function actionCheckAllowedEdits(phoneNumber, imageId) {
   const image = findTrackedImage(phoneNumber, imageId);
@@ -66,4 +72,5 @@ module.exports = {
   actionEditGraphic,
   actionGenerateBulkGraphics,
   actionSelectTvModel,
+  buildTopLevelEditOptions,
 };

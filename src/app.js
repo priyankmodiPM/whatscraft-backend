@@ -8,6 +8,7 @@ const {
   actionEditGraphic,
   actionGenerateBulkGraphics,
   actionSelectTvModel,
+  buildTopLevelEditOptions,
 } = require('./actions');
 const { parseEditOptionId, messageTextForInteractiveReply } = require('./interactiveReply');
 
@@ -81,13 +82,35 @@ function sendButtons(to, bodyText, options) {
   });
 }
 
+// WhatsApp list messages: a single "menu" button plus up to 10 rows in one section.
+function sendList(to, { bodyText, buttonText, options }) {
+  return whatsappPost({
+    messaging_product: 'whatsapp',
+    to,
+    type: 'interactive',
+    interactive: {
+      type: 'list',
+      body: { text: bodyText },
+      action: {
+        button: buttonText,
+        sections: [{ rows: options.map((option) => ({ id: option.id, title: option.title })) }],
+      },
+    },
+  });
+}
+
 // WhatsApp reply-button messages cap out at 3 buttons, so options beyond that
 // go out as additional button messages rather than falling back to a list picker.
 const BUTTONS_PER_MESSAGE = 3;
 
-async function sendEditOptions(to, { bodyText, options }) {
+async function sendEditOptions(to, result) {
+  const { bodyText, options, buttonText } = result;
   if (options.length === 0) {
     await sendText(to, bodyText);
+    return;
+  }
+  if (buttonText) {
+    await sendList(to, { bodyText, buttonText, options });
     return;
   }
   for (let i = 0; i < options.length; i += BUTTONS_PER_MESSAGE) {
@@ -224,12 +247,20 @@ const tools = [
 
 // ── GPT decision engine ──────────────────────────────────────────────────────
 
+function formatCurrentEdits(currentEdits) {
+  const entries = Object.entries(currentEdits || {});
+  if (entries.length === 0) return '';
+  return ` (${entries.map(([key, value]) => `${key}: ${value}`).join(', ')})`;
+}
+
 async function decideAction(phoneNumber, userMessage) {
   // Keep a wide window so multi-step flows (e.g. "design X" → "Onam? yes" →
   // "address? yes" → create) still see the original product/offer request.
   const recentHistory = getHistory(phoneNumber).slice(-12);
   const trackedImages = getTrackedImages(phoneNumber);
-  const imagesList = trackedImages.map((image) => `- ${image.id}: ${image.name}`).join('\n');
+  const imagesList = trackedImages
+    .map((image) => `- ${image.id}: ${image.name}${formatCurrentEdits(image.currentEdits)}`)
+    .join('\n');
 
   const messages = [
     {
@@ -248,6 +279,11 @@ Creating a brand-new design (create_design), gather details first with tappable 
 Choosing between edit_graphic and check_allowed_edits: if the user's message already contains a concrete change and its value (e.g. "make the background marigold", "add my address MG Road Kochi"), call edit_graphic with all of those changes in the edits object. Only call check_allowed_edits when the user asks what can be changed or wants the list of options WITHOUT giving a specific value.
 When editing, prefer these field names when they apply: headline, background, address, offer.
 If the user asks to translate a tag's text into another language (e.g. "change the headline to Hindi", "translate the banner to Malayalam"), translate the current text yourself before calling edit_graphic and pass the translated text as the edit value. For Hindi, use Devanagari script (e.g. "उपलब्ध"); for Malayalam, use Malayalam script (e.g. "ഓണം"). Never use a romanized/transliterated form.
+When the user taps a menu option for "product", "discount", or "price" (from the fixed Edit Product/Edit Discount/Edit Price menu on an Express-catalog graphic):
+- "product": call select_tv_model.
+- "discount" or "price" with no value given yet: call ask_for_more_information asking what they'd like the new discount or price to be.
+- "discount" WITH a value (a percentage, in English, Hindi, or Hinglish — e.g. "50%", "discount ko 50% kar do", "40% off"): compute the new price yourself as oldPrice × (1 − discountPercent / 100), rounded to the nearest whole number, using the oldPrice shown in the images list below, then call edit_graphic with only { "price": <computed value> } — never change oldPrice.
+- "price" WITH a value: call edit_graphic with { "price": <value> } directly, no computation needed.
 
 Images previously sent to this user (reference by id):
 ${imagesList}`,
@@ -268,6 +304,28 @@ ${imagesList}`,
   });
 
   return response.choices[0].message;
+}
+
+// Turns a structured edit outcome into the actual WhatsApp reply text, matching
+// the user's language/style (English or Hinglish) rather than a fixed template.
+async function phraseOutcome(phoneNumber, userMessage, outcome) {
+  const response = await openai.chat.completions.create({
+    model: openaiModel,
+    messages: [
+      {
+        role: 'system',
+        content: `You are a WhatsApp assistant. Given the outcome below, write a short reply to the user. Match the user's language and style — if their message was Hinglish (romanized Hindi mixed with English), reply in Hinglish; otherwise reply in English. Don't invent facts beyond the outcome given.
+
+Examples of the tone/style to match:
+- Success (English): "I have updated product, with price & discount"
+- Success (Hinglish): "Maine discount aur price updated kar diya hai"
+- Capped (Hinglish): "Iss product pr maximum 40% discount de sakte hain"`,
+      },
+      { role: 'user', content: `User message: ${userMessage}\nOutcome: ${JSON.stringify(outcome)}` },
+    ],
+  });
+
+  return response.choices[0].message.content;
 }
 
 // ── Webhook routes ───────────────────────────────────────────────────────────
@@ -370,11 +428,30 @@ app.post('/', async (req, res) => {
         }
 
         case 'edit_graphic': {
-          // Progress is streamed from inside the flow. On success the flow already
-          // sent the image+caption; a guardrail rejection returns a plain string.
+          // Progress is streamed from inside the flow. Local-flow outcomes are
+          // either a plain string (guardrail rejection) or {skipSend:true,
+          // historyText} (success, image+caption already sent). Express-flow
+          // outcomes are always a structured {status, ...} object — phrased here
+          // to match the user's language, delivered with that phrasing as the
+          // image caption, then followed by the fixed Edit Product/Discount/Price menu.
           const result = await actionEditGraphic(phoneNumber, args.image_id, args.edits, { sendImage, sendText });
           if (typeof result === 'string') {
             replyText = result;
+          } else if (result.status) {
+            replyText = await phraseOutcome(phoneNumber, userText, result);
+            if (result.status === 'success') {
+              try {
+                await sendImage(phoneNumber, result.thumbnailUrl, replyText);
+              } catch (err) {
+                console.error('[edit_graphic] sendImage error', { message: err.message });
+                replyText = `Updated "${result.productName}", but I couldn't send the image right now — try asking me to resend it.`;
+                await sendText(phoneNumber, replyText);
+              }
+            } else {
+              await sendText(phoneNumber, replyText);
+            }
+            await sendEditOptions(phoneNumber, buildTopLevelEditOptions(args.image_id));
+            skipSend = true;
           } else {
             replyText = result.historyText;
             skipSend = true;
