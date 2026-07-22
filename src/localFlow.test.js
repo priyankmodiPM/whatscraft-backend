@@ -3,7 +3,8 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const os = require('node:os');
-const { actionCreateDesign, actionEditGraphic } = require('./actions');
+const localFlow = require('./localFlow');
+const { findTrackedImage } = require('./imageStore');
 
 const FIXTURE = {
   images: {
@@ -37,11 +38,19 @@ function captureSendImage() {
   return { sendImage: async (_to, link) => sent.push(link), sent };
 }
 
-test('actionCreateDesign registers a local design and sends the base image', async () => {
+// Create a design for a phone (base image sent) and return its tracked image object.
+async function setup(phone, args = { occasion: 'Onam' }) {
+  useFixture();
+  const { sendImage, sent } = captureSendImage();
+  await localFlow.createDesign(phone, args, { sendImage });
+  return { image: findTrackedImage(phone, 'local_1'), sendImage, sent };
+}
+
+test('createDesign registers a local design and sends the base image', async () => {
   useFixture();
   const { sendImage, sent } = captureSendImage();
 
-  const reply = await actionCreateDesign(
+  const reply = await localFlow.createDesign(
     'onam-phone-1',
     { occasion: 'Onam', products: ['LG washing machine', 'dishwasher'], offer: '20% off' },
     { sendImage }
@@ -51,12 +60,20 @@ test('actionCreateDesign registers a local design and sends the base image', asy
   assert.match(reply, /Built with Croma's logo/);
 });
 
-test('editing a created design to an off-palette background is rejected with approved options', async () => {
-  useFixture();
-  const { sendImage, sent } = captureSendImage();
-  await actionCreateDesign('onam-phone-2', { occasion: 'Onam' }, { sendImage });
+test('checkAllowedEdits lists the editable slots from the static schema', async () => {
+  const { image } = await setup('onam-phone-check');
 
-  const reply = await actionEditGraphic('onam-phone-2', 'local_1', { background: 'Pink' }, { sendImage });
+  const result = localFlow.checkAllowedEdits(image);
+
+  assert.equal(result.type, 'edit_options');
+  assert.deepEqual(result.options.map((o) => o.title), ['Change headline', 'Change background', 'Change address']);
+  assert.match(result.historyText, /headline/);
+});
+
+test('editing to an off-palette background is rejected with the approved options', async () => {
+  const { image, sent } = await setup('onam-phone-2');
+
+  const reply = await localFlow.editGraphic('onam-phone-2', image, { background: 'Pink' }, { sendImage: async (_t, l) => sent.push(l) });
 
   assert.match(reply, /isn't in the approved palette/);
   assert.match(reply, /Marigold · Maroon · Deep Green/);
@@ -64,85 +81,67 @@ test('editing a created design to an off-palette background is rejected with app
 });
 
 test('an approved-palette background + address resolves to the final image', async () => {
-  useFixture();
-  const { sendImage, sent } = captureSendImage();
-  await actionCreateDesign('onam-phone-3', { occasion: 'Onam' }, { sendImage });
+  const { image, sent } = await setup('onam-phone-3');
 
-  await actionEditGraphic('onam-phone-3', 'local_1', { background: 'Marigold', address: 'MG Road, Kochi' }, { sendImage });
+  await localFlow.editGraphic('onam-phone-3', image, { background: 'Marigold', address: 'MG Road, Kochi' }, { sendImage: async (_t, l) => sent.push(l) });
 
   assert.equal(sent.at(-1), FIXTURE.images.final);
 });
 
 test('a Malayalam headline resolves to the Malayalam image', async () => {
-  useFixture();
-  const { sendImage, sent } = captureSendImage();
-  await actionCreateDesign('onam-phone-4', { occasion: 'Onam' }, { sendImage });
+  const { image, sent } = await setup('onam-phone-4');
 
-  await actionEditGraphic('onam-phone-4', 'local_1', { headline: 'ഓണം ആശംസകൾ' }, { sendImage });
+  await localFlow.editGraphic('onam-phone-4', image, { headline: 'ഓണം ആശംസകൾ' }, { sendImage: async (_t, l) => sent.push(l) });
 
   assert.equal(sent.at(-1), FIXTURE.images.malayalam);
 });
 
 test('adding only a store address resolves to the final image (demo msg 2)', async () => {
-  useFixture();
-  const { sendImage, sent } = captureSendImage();
-  await actionCreateDesign('onam-phone-a', { occasion: 'Onam' }, { sendImage });
+  const { image, sent } = await setup('onam-phone-a');
 
-  await actionEditGraphic('onam-phone-a', 'local_1', { address: 'Princess Street, Kochi' }, { sendImage });
+  await localFlow.editGraphic('onam-phone-a', image, { address: 'Princess Street, Kochi' }, { sendImage: async (_t, l) => sent.push(l) });
 
   assert.equal(sent.at(-1), FIXTURE.images.final);
 });
 
 test('a translate request under an unrecognized key still resolves to Malayalam (demo msg 3)', async () => {
-  useFixture();
-  const { sendImage, sent } = captureSendImage();
-  await actionCreateDesign('onam-phone-b', { occasion: 'Onam' }, { sendImage });
+  const { image, sent } = await setup('onam-phone-b');
 
-  // model phrases it as a language change rather than a headline edit
-  const reply = await actionEditGraphic('onam-phone-b', 'local_1', { language: 'Malayalam' }, { sendImage });
+  const reply = await localFlow.editGraphic('onam-phone-b', image, { language: 'Malayalam' }, { sendImage: async (_t, l) => sent.push(l) });
 
   assert.equal(sent.at(-1), FIXTURE.images.malayalam);
   assert.doesNotMatch(reply, /locked by HQ/);
 });
 
 test('a Malayalam value under any key resolves to Malayalam', async () => {
-  useFixture();
-  const { sendImage, sent } = captureSendImage();
-  await actionCreateDesign('onam-phone-c', { occasion: 'Onam' }, { sendImage });
+  const { image, sent } = await setup('onam-phone-c');
 
-  await actionEditGraphic('onam-phone-c', 'local_1', { banner: 'ഓണം ആശംസകൾ' }, { sendImage });
+  await localFlow.editGraphic('onam-phone-c', image, { banner: 'ഓണം ആശംസകൾ' }, { sendImage: async (_t, l) => sent.push(l) });
 
   assert.equal(sent.at(-1), FIXTURE.images.malayalam);
 });
 
 test('a Malayalam value landing on the background key translates, not palette-rejected (regression)', async () => {
-  useFixture();
-  const { sendImage, sent } = captureSendImage();
-  await actionCreateDesign('onam-phone-d', { occasion: 'Onam' }, { sendImage });
+  const { image, sent } = await setup('onam-phone-d');
 
-  // model mistakenly puts the translated word on a "background"-like key
-  const reply = await actionEditGraphic('onam-phone-d', 'local_1', { background: 'ഓണം' }, { sendImage });
+  const reply = await localFlow.editGraphic('onam-phone-d', image, { background: 'ഓണം' }, { sendImage: async (_t, l) => sent.push(l) });
 
   assert.equal(sent.at(-1), FIXTURE.images.malayalam);
   assert.doesNotMatch(reply, /approved palette/);
 });
 
-test('editing a locked element on a created design is refused', async () => {
-  useFixture();
-  const { sendImage } = captureSendImage();
-  await actionCreateDesign('onam-phone-5', { occasion: 'Onam' }, { sendImage });
+test('editing a locked element is refused', async () => {
+  const { image } = await setup('onam-phone-5');
 
-  const reply = await actionEditGraphic('onam-phone-5', 'local_1', { logo: 'brighter' }, { sendImage });
+  const reply = await localFlow.editGraphic('onam-phone-5', image, { logo: 'brighter' }, { sendImage: async () => {} });
 
   assert.match(reply, /locked by HQ/);
 });
 
 test('edit-key aliases map onto canonical slot names (colour -> background)', async () => {
-  useFixture();
-  const { sendImage, sent } = captureSendImage();
-  await actionCreateDesign('onam-phone-6', { occasion: 'Onam' }, { sendImage });
+  const { image, sent } = await setup('onam-phone-6');
 
-  await actionEditGraphic('onam-phone-6', 'local_1', { colour: 'Deep Green' }, { sendImage });
+  await localFlow.editGraphic('onam-phone-6', image, { colour: 'Deep Green' }, { sendImage: async (_t, l) => sent.push(l) });
 
   assert.equal(sent.at(-1), FIXTURE.images.final);
 });
