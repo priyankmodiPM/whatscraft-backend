@@ -35,9 +35,9 @@ test('actionCheckAllowedEdits lists the tagged elements for a known image', asyn
 
   const reply = await actionCheckAllowedEdits('phone-1', 'img_1');
 
-  assert.match(reply, /Croma Earbuds/);
-  assert.match(reply, /heading: currently "The X-Phone Pro is here!"/);
-  assert.match(reply, /cta: currently/);
+  assert.match(reply.historyText, /Croma Earbuds/);
+  assert.match(reply.historyText, /heading: currently "The X-Phone Pro is here!"/);
+  assert.match(reply.historyText, /cta: currently/);
 });
 
 test('actionCheckAllowedEdits shows the latest edited value instead of the stale original document value', async () => {
@@ -47,9 +47,9 @@ test('actionCheckAllowedEdits shows the latest edited value instead of the stale
 
   const reply = await actionCheckAllowedEdits('phone-1b', 'img_1');
 
-  assert.match(reply, /cta: currently "20% off"/);
-  assert.doesNotMatch(reply, /Available at our store starting 15 Aug 20XX\./);
-  assert.match(reply, /heading: currently "The X-Phone Pro is here!"/);
+  assert.match(reply.historyText, /cta: currently "20% off"/);
+  assert.doesNotMatch(reply.historyText, /Available at our store starting 15 Aug 20XX\./);
+  assert.match(reply.historyText, /heading: currently "The X-Phone Pro is here!"/);
 });
 
 test('actionCheckAllowedEdits reports unknown images without throwing', async () => {
