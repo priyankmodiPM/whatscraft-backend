@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { parseEditOptionId, messageTextForInteractiveReply } = require('./interactiveReply');
+const { buildValueEditId, parseEditOptionId, messageTextForInteractiveReply } = require('./interactiveReply');
 
 test('parseEditOptionId parses a bare field-only id', () => {
   const parsed = parseEditOptionId('edit:img_1:heading');
@@ -27,4 +27,25 @@ test('messageTextForInteractiveReply builds a change-field message for a bare fi
 test('messageTextForInteractiveReply falls back to the title when the id is unparseable', () => {
   const text = messageTextForInteractiveReply({ id: 'not-an-edit-id', title: 'Some Title' });
   assert.equal(text, 'Some Title');
+});
+
+test('buildValueEditId round-trips through parseEditOptionId', () => {
+  const edits = { productImage: 'https://s7ap1.scene7.com/is/image/healthmonitor/SonyTv?wid=1000', oldPrice: 33999, price: 27199 };
+  const id = buildValueEditId('img_1', edits);
+  const parsed = parseEditOptionId(id);
+  assert.deepEqual(parsed, { imageId: 'img_1', edits });
+});
+
+test('parseEditOptionId still parses a bare field-only id after the value-edit change', () => {
+  const parsed = parseEditOptionId('edit:img_1:heading');
+  assert.deepEqual(parsed, { imageId: 'img_1', fieldName: 'heading' });
+});
+
+test('messageTextForInteractiveReply lists every field/value for a fully-specified edit id', () => {
+  const id = buildValueEditId('img_1', { productImage: 'https://example.com/tv.png', oldPrice: 33999, price: 27199 });
+  const text = messageTextForInteractiveReply({ id, title: 'Sony Bravia K-75' });
+  assert.equal(
+    text,
+    'I\'d like to change "productImage" to "https://example.com/tv.png", "oldPrice" to "33999", "price" to "27199" on image img_1.'
+  );
 });
