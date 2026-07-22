@@ -15,22 +15,61 @@ function loadOnamDesign() {
   return JSON.parse(fs.readFileSync(filePath, 'utf8'));
 }
 
-// create_design: register a brand-new local design and send its base image.
-async function createDesign(phoneNumber, { occasion, products, offer } = {}, { sendImage }) {
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+// Send progress ("streaming") messages one at a time with a pause between them,
+// so generation feels like real work rather than an instant response. No-op when
+// no sender is provided (keeps unit tests fast). Delay is tunable for the demo.
+async function streamProgress(sendText, phoneNumber, messages) {
+  if (typeof sendText !== 'function') return;
+  const delay = Number(process.env.GEN_STEP_DELAY_MS ?? 1800);
+  for (const message of messages) {
+    await sendText(phoneNumber, message);
+    await sleep(delay);
+  }
+}
+
+// create_design: register a brand-new local design and send its image with a
+// friendly caption. If the user opted to include their address, the creative
+// that carries it is the "final" image (we only ship 2 canned URLs for this flow).
+async function createDesign(phoneNumber, { occasion, products, offer, includeAddress } = {}, { sendImage, sendText }) {
   const design = loadOnamDesign();
   const productList = Array.isArray(products) && products.length ? products.join(' + ') : (products || 'your products');
-  const name = [occasion || 'Festive', productList, 'offer'].filter(Boolean).join(' ');
-  console.log('[action:create_design]', { phoneNumber, occasion, products, offer, image: design.images.base });
-  registerDesign(phoneNumber, { name, design });
+  const festive = occasion || 'Festive';
+  const name = [festive, productList, 'offer'].filter(Boolean).join(' ');
+  const image = registerDesign(phoneNumber, { name, design });
+
+  const imageUrl = includeAddress ? design.images.final : design.images.base;
+  if (includeAddress) recordEdits(phoneNumber, image.id, { address: 'your store' });
+
+  console.log('[action:create_design]', { phoneNumber, occasion, products, offer, includeAddress, image: imageUrl });
+
+  // Stream the "work being done" so generation feels real, then send the image.
+  const steps = [
+    `🎨 Got it — creating your ${festive} creative now. Give me a few seconds…`,
+    `📦 Pulling Croma's logo and the approved ${festive} colour palette from the brand kit…`,
+    `📱 Adding your products: ${productList}…`,
+    `🏷️ Applying ${offer ? `your ${offer} offer` : 'your offer'} and festive ${festive} styling…`,
+  ];
+  if (includeAddress) steps.push('📍 Placing your store address…');
+  await streamProgress(sendText, phoneNumber, steps);
+
+  const offerText = offer ? ` at ${offer}` : '';
+  const addressText = includeAddress ? ', with your store address' : '';
+  // The follow-up prompt lives inside the caption so it never arrives before the
+  // image — WhatsApp delivers link images a beat after plain text.
+  const caption = `🌼 Happy ${festive}! Here's your festive creative — ${productList}${offerText}${addressText}. On-brand with Croma's logo and approved colours, ready to share. ✨\n\nWant to change anything? For example, I can translate the whole banner to Malayalam. 🌸`;
 
   try {
-    await sendImage(phoneNumber, design.images.base);
+    await sendImage(phoneNumber, imageUrl, caption);
   } catch (err) {
     console.error('[localFlow.createDesign] sendImage error', { message: err.message });
-    return `I built your ${occasion || 'festive'} design, but couldn't send the image right now — try asking me to resend it.`;
+    return `I built your ${festive} design, but couldn't send the image right now — try asking me to resend it.`;
   }
 
-  return `Here you go 🌼 Built with Croma's logo, approved festive colours and the ${productList} images. Want to tweak anything?`;
+  return { skipSend: true, historyText: caption };
 }
 
 function normalizeKey(key) {
@@ -95,7 +134,7 @@ function checkAllowedEdits(image) {
 }
 
 // Apply edits by resolving to the matching canned image URL.
-async function editGraphic(phoneNumber, image, rawEdits, { sendImage }) {
+async function editGraphic(phoneNumber, image, rawEdits, { sendImage, sendText }) {
   const design = image.design;
   const editableSlots = design.slots.editable;
 
@@ -133,18 +172,26 @@ async function editGraphic(phoneNumber, image, rawEdits, { sendImage }) {
   const imageUrl = resolveLocalImage(design, currentEdits);
   console.log('[edit:local] resolved image', { imageId: image.id, currentEdits, imageUrl });
 
+  // Stream progress so the re-render feels real, then send the updated image.
+  const progress = wantsMalayalam
+    ? ['🌸 Translating your banner to Malayalam…', '✍️ Re-rendering with the Malayalam text…']
+    : ['✍️ Updating your creative…'];
+  await streamProgress(sendText, phoneNumber, progress);
+
   const summary = wantsMalayalam
-    ? '• translated to Malayalam'
-    : Object.entries(appliedEdits).map(([key, value]) => `• ${key}: ${value}`).join('\n');
+    ? '🌸 Here you go — your banner is now in Malayalam!'
+    : `✅ Done! Updated ${Object.entries(appliedEdits).map(([key, value]) => `${key} → ${value}`).join(', ')}.`;
+  // Follow-up lives in the caption so it can't arrive before the image.
+  const caption = `${summary}\n\nAnything else you'd like to change?`;
 
   try {
-    await sendImage(phoneNumber, imageUrl);
+    await sendImage(phoneNumber, imageUrl, caption);
   } catch (err) {
     console.error('[localFlow.editGraphic] sendImage error', { imageId: image.id, message: err.message });
-    return `Updated "${image.name}", but I couldn't send the image right now — try asking me to resend it.`;
+    return `I updated "${image.name}", but couldn't send the image right now — try asking me to resend it.`;
   }
 
-  return `Updated "${image.name}":\n${summary}`;
+  return { skipSend: true, historyText: caption };
 }
 
 module.exports = { createDesign, checkAllowedEdits, editGraphic };

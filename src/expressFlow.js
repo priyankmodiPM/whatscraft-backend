@@ -64,7 +64,7 @@ async function checkAllowedEdits(image) {
 }
 
 // Apply edits via the real Adobe Express generate-variation pipeline.
-async function editGraphic(phoneNumber, image, edits, { sendImage }) {
+async function editGraphic(phoneNumber, image, edits, { sendImage, sendText }) {
   let elements;
   try {
     const doc = await expressApi.getTaggedDocument(image.docId);
@@ -93,6 +93,8 @@ async function editGraphic(phoneNumber, image, edits, { sendImage }) {
     return `The maximum discount I can apply on "${image.name}" is ${MAX_DISCOUNT_PERCENT}%. Try again with ${MAX_DISCOUNT_PERCENT}% or less.`;
   }
 
+  if (typeof sendText === 'function') await sendText(phoneNumber, '⏳ Applying your edit and re-rendering with Adobe Express…');
+
   const mergedEdits = { ...image.currentEdits, ...edits };
   const pages = expressApi.pagesForEdits(elements, Object.keys(mergedEdits));
   const preferredDocumentName = expressApi.buildPreferredDocumentName(image.name);
@@ -111,15 +113,17 @@ async function editGraphic(phoneNumber, image, edits, { sendImage }) {
   recordEdits(phoneNumber, image.id, edits);
 
   const summary = Object.entries(edits).map(([key, value]) => `• ${key}: ${value}`).join('\n');
+  // Caption carries the summary so text never arrives before the image.
+  const caption = `Updated "${image.name}":\n${summary}\n\nAnything else you'd like to change?`;
 
   try {
-    await sendImage(phoneNumber, thumbnailUrl);
+    await sendImage(phoneNumber, thumbnailUrl, caption);
   } catch (err) {
     console.error('[expressFlow.editGraphic] sendImage error', { docId: image.docId, message: err.message });
     return `Updated "${image.name}", but I couldn't send the image right now — try asking me to resend it.`;
   }
 
-  return `Updated "${image.name}":\n${summary}`;
+  return { skipSend: true, historyText: caption };
 }
 
 module.exports = { selectTvModel, checkAllowedEdits, editGraphic, MAX_DISCOUNT_PERCENT };

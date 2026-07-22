@@ -105,7 +105,7 @@ test('editGraphic applies an allowed edit end-to-end: generates, polls, sends th
 
   const reply = await expressFlow.editGraphic('phone-5', image, { cta: '20% off' }, { sendImage });
 
-  assert.match(reply, /Updated "Croma Earbuds"/);
+  assert.match(reply.historyText, /Updated "Croma Earbuds"/);
   assert.equal(sentCalls.length, 1);
   assert.equal(sentCalls[0].to, 'phone-5');
   assert.equal(sentCalls[0].link, 'https://example.com/thumb.png');

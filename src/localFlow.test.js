@@ -33,12 +33,14 @@ function useFixture() {
   process.env.ONAM_DESIGN_FILE = p;
 }
 
+// Captures both the image link and its caption so we can assert on the
+// descriptive text sent alongside each image.
 function captureSendImage() {
   const sent = [];
-  return { sendImage: async (_to, link) => sent.push(link), sent };
+  return { sendImage: async (_to, link, caption) => sent.push({ link, caption }), sent };
 }
 
-// Create a design for a phone (base image sent) and return its tracked image object.
+// Create a design for a phone (image sent) and return its tracked image object.
 async function setup(phone, args = { occasion: 'Onam' }) {
   useFixture();
   const { sendImage, sent } = captureSendImage();
@@ -46,7 +48,7 @@ async function setup(phone, args = { occasion: 'Onam' }) {
   return { image: findTrackedImage(phone, 'local_1'), sendImage, sent };
 }
 
-test('createDesign registers a local design and sends the base image', async () => {
+test('createDesign registers a local design and sends the base image with a caption', async () => {
   useFixture();
   const { sendImage, sent } = captureSendImage();
 
@@ -56,8 +58,60 @@ test('createDesign registers a local design and sends the base image', async () 
     { sendImage }
   );
 
-  assert.equal(sent[0], FIXTURE.images.base);
-  assert.match(reply, /Built with Croma's logo/);
+  assert.equal(sent[0].link, FIXTURE.images.base);
+  assert.match(sent[0].caption, /Onam/);
+  assert.match(sent[0].caption, /20% off/);
+  assert.match(sent[0].caption, /change anything/i); // follow-up is in the caption, not a separate text
+  assert.equal(reply.skipSend, true);
+});
+
+test('createDesign with includeAddress sends the with-address (final) image', async () => {
+  useFixture();
+  const { sendImage, sent } = captureSendImage();
+
+  await localFlow.createDesign(
+    'onam-phone-addr',
+    { occasion: 'Onam', products: ['Samsung Galaxy S26', 'Galaxy Buds 3'], offer: '20% off', includeAddress: true },
+    { sendImage }
+  );
+
+  assert.equal(sent[0].link, FIXTURE.images.final);
+  assert.match(sent[0].caption, /store address/);
+});
+
+test('createDesign streams progress messages (products + address) before the image', async () => {
+  useFixture();
+  process.env.GEN_STEP_DELAY_MS = '0'; // no real pause in tests
+  const texts = [];
+  const sendText = async (_to, msg) => texts.push(msg);
+  const { sendImage, sent } = captureSendImage();
+
+  await localFlow.createDesign(
+    'onam-stream-1',
+    { occasion: 'Onam', products: ['Samsung Galaxy S26', 'Galaxy Buds 3'], offer: '20% off', includeAddress: true },
+    { sendImage, sendText }
+  );
+
+  assert.ok(texts.length >= 4, 'streams several progress messages');
+  assert.ok(texts.some((m) => /Samsung Galaxy S26 \+ Galaxy Buds 3/.test(m)), 'names the products');
+  assert.ok(texts.some((m) => /store address/i.test(m)), 'mentions the address step');
+  assert.equal(sent[0].link, FIXTURE.images.final); // image sent after the stream
+});
+
+test('editGraphic streams Malayalam progress before sending the Malayalam image', async () => {
+  process.env.GEN_STEP_DELAY_MS = '0';
+  const { image } = await setup('onam-stream-2');
+  const texts = [];
+  const sent = [];
+  const sendText = async (_to, msg) => texts.push(msg);
+
+  await localFlow.editGraphic('onam-stream-2', image, { language: 'Malayalam' }, {
+    sendImage: async (_t, l, c) => sent.push({ link: l, caption: c }),
+    sendText,
+  });
+
+  assert.ok(texts.some((m) => /Malayalam/i.test(m)), 'streams a Malayalam progress message');
+  assert.equal(sent.at(-1).link, FIXTURE.images.malayalam);
 });
 
 test('checkAllowedEdits lists the editable slots from the static schema', async () => {
@@ -73,7 +127,7 @@ test('checkAllowedEdits lists the editable slots from the static schema', async 
 test('editing to an off-palette background is rejected with the approved options', async () => {
   const { image, sent } = await setup('onam-phone-2');
 
-  const reply = await localFlow.editGraphic('onam-phone-2', image, { background: 'Pink' }, { sendImage: async (_t, l) => sent.push(l) });
+  const reply = await localFlow.editGraphic('onam-phone-2', image, { background: 'Pink' }, { sendImage: async (_t, l, c) => sent.push({ link: l, caption: c }) });
 
   assert.match(reply, /isn't in the approved palette/);
   assert.match(reply, /Marigold · Maroon · Deep Green/);
@@ -83,51 +137,52 @@ test('editing to an off-palette background is rejected with the approved options
 test('an approved-palette background + address resolves to the final image', async () => {
   const { image, sent } = await setup('onam-phone-3');
 
-  await localFlow.editGraphic('onam-phone-3', image, { background: 'Marigold', address: 'MG Road, Kochi' }, { sendImage: async (_t, l) => sent.push(l) });
+  await localFlow.editGraphic('onam-phone-3', image, { background: 'Marigold', address: 'MG Road, Kochi' }, { sendImage: async (_t, l, c) => sent.push({ link: l, caption: c }) });
 
-  assert.equal(sent.at(-1), FIXTURE.images.final);
+  assert.equal(sent.at(-1).link, FIXTURE.images.final);
 });
 
-test('a Malayalam headline resolves to the Malayalam image', async () => {
+test('a Malayalam headline resolves to the Malayalam image with a Malayalam caption', async () => {
   const { image, sent } = await setup('onam-phone-4');
 
-  await localFlow.editGraphic('onam-phone-4', image, { headline: 'ഓണം ആശംസകൾ' }, { sendImage: async (_t, l) => sent.push(l) });
+  await localFlow.editGraphic('onam-phone-4', image, { headline: 'ഓണം ആശംസകൾ' }, { sendImage: async (_t, l, c) => sent.push({ link: l, caption: c }) });
 
-  assert.equal(sent.at(-1), FIXTURE.images.malayalam);
+  assert.equal(sent.at(-1).link, FIXTURE.images.malayalam);
+  assert.match(sent.at(-1).caption, /Malayalam/);
 });
 
 test('adding only a store address resolves to the final image (demo msg 2)', async () => {
   const { image, sent } = await setup('onam-phone-a');
 
-  await localFlow.editGraphic('onam-phone-a', image, { address: 'Princess Street, Kochi' }, { sendImage: async (_t, l) => sent.push(l) });
+  await localFlow.editGraphic('onam-phone-a', image, { address: 'Princess Street, Kochi' }, { sendImage: async (_t, l, c) => sent.push({ link: l, caption: c }) });
 
-  assert.equal(sent.at(-1), FIXTURE.images.final);
+  assert.equal(sent.at(-1).link, FIXTURE.images.final);
 });
 
 test('a translate request under an unrecognized key still resolves to Malayalam (demo msg 3)', async () => {
   const { image, sent } = await setup('onam-phone-b');
 
-  const reply = await localFlow.editGraphic('onam-phone-b', image, { language: 'Malayalam' }, { sendImage: async (_t, l) => sent.push(l) });
+  await localFlow.editGraphic('onam-phone-b', image, { language: 'Malayalam' }, { sendImage: async (_t, l, c) => sent.push({ link: l, caption: c }) });
 
-  assert.equal(sent.at(-1), FIXTURE.images.malayalam);
-  assert.doesNotMatch(reply, /locked by HQ/);
+  // resolving to the Malayalam image (rather than a "locked by HQ" text) proves it wasn't rejected
+  assert.equal(sent.at(-1).link, FIXTURE.images.malayalam);
 });
 
 test('a Malayalam value under any key resolves to Malayalam', async () => {
   const { image, sent } = await setup('onam-phone-c');
 
-  await localFlow.editGraphic('onam-phone-c', image, { banner: 'ഓണം ആശംസകൾ' }, { sendImage: async (_t, l) => sent.push(l) });
+  await localFlow.editGraphic('onam-phone-c', image, { banner: 'ഓണം ആശംസകൾ' }, { sendImage: async (_t, l, c) => sent.push({ link: l, caption: c }) });
 
-  assert.equal(sent.at(-1), FIXTURE.images.malayalam);
+  assert.equal(sent.at(-1).link, FIXTURE.images.malayalam);
 });
 
 test('a Malayalam value landing on the background key translates, not palette-rejected (regression)', async () => {
   const { image, sent } = await setup('onam-phone-d');
 
-  const reply = await localFlow.editGraphic('onam-phone-d', image, { background: 'ഓണം' }, { sendImage: async (_t, l) => sent.push(l) });
+  await localFlow.editGraphic('onam-phone-d', image, { background: 'ഓണം' }, { sendImage: async (_t, l, c) => sent.push({ link: l, caption: c }) });
 
-  assert.equal(sent.at(-1), FIXTURE.images.malayalam);
-  assert.doesNotMatch(reply, /approved palette/);
+  // resolving to the Malayalam image proves it wasn't palette-rejected
+  assert.equal(sent.at(-1).link, FIXTURE.images.malayalam);
 });
 
 test('editing a locked element is refused', async () => {
@@ -141,7 +196,7 @@ test('editing a locked element is refused', async () => {
 test('edit-key aliases map onto canonical slot names (colour -> background)', async () => {
   const { image, sent } = await setup('onam-phone-6');
 
-  await localFlow.editGraphic('onam-phone-6', image, { colour: 'Deep Green' }, { sendImage: async (_t, l) => sent.push(l) });
+  await localFlow.editGraphic('onam-phone-6', image, { colour: 'Deep Green' }, { sendImage: async (_t, l, c) => sent.push({ link: l, caption: c }) });
 
-  assert.equal(sent.at(-1), FIXTURE.images.final);
+  assert.equal(sent.at(-1).link, FIXTURE.images.final);
 });

@@ -49,6 +49,6 @@ test('routes a local-source image to the canned flow (no Express API call)', asy
 
   const reply = await actionEditGraphic('phone-r3', 'local_1', { address: 'MG Road' }, { sendImage });
 
-  assert.match(reply, /Updated/);
+  assert.match(reply.historyText, /anything else/i);
   assert.equal(sent.at(-1), 'https://cdn.test/f.png'); // canned "final" URL — proves the local flow ran
 });
