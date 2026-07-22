@@ -201,9 +201,17 @@ async function editGraphic(phoneNumber, image, edits, { sendText } = {}) {
   const pages = expressApi.pagesForEdits(elements, Object.keys(mergedEdits));
   const preferredDocumentName = expressApi.buildPreferredDocumentName(image.name);
 
+  // Tagged text elements always hold string values (see getTaggedDocument), and
+  // Adobe's generate-variation API rejects a JSON number for a text tag with
+  // "Unsupported text value for tag: <name>" (422) — so numeric edits like price/
+  // oldPrice must be sent as strings even though they're computed as numbers.
+  const tagMappings = Object.fromEntries(
+    Object.entries(mergedEdits).map(([key, value]) => [key, String(value)])
+  );
+
   let thumbnailUrl;
   try {
-    const { statusUrl } = await expressApi.generateVariation(image.docId, mergedEdits, pages, preferredDocumentName);
+    const { statusUrl } = await expressApi.generateVariation(image.docId, tagMappings, pages, preferredDocumentName);
     const result = await expressApi.pollJobStatus(statusUrl);
     thumbnailUrl = result.document.thumbnailUrl;
     console.log('[edit:express] resolved image', { imageId: image.id, docId: image.docId, thumbnailUrl });

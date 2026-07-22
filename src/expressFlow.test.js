@@ -176,7 +176,7 @@ test('editGraphic applies a price edit at exactly the 40% cap (within rounding t
   writeFixtureCatalog([{ id: 'img_2', name: 'TV Product', docId: 'urn:doc:2' }]);
   expressApi.getTaggedDocument = async () => TV_ELEMENTS_DOC;
   expressApi.generateVariation = async (docId, tagMappings) => {
-    assert.deepEqual(tagMappings, { productImage: 'https://example.com/tv.png', oldPrice: 33999, price: 20399 });
+    assert.deepEqual(tagMappings, { productImage: 'https://example.com/tv.png', oldPrice: '33999', price: '20399' });
     return { jobId: 'job-2', statusUrl: 'https://express-api.adobe.io/status/job-2' };
   };
   expressApi.pollJobStatus = async () => ({ status: 'succeeded', document: { thumbnailUrl: 'https://example.com/thumb2.png' } });
@@ -187,6 +187,24 @@ test('editGraphic applies a price edit at exactly the 40% cap (within rounding t
 
   assert.equal(result.status, 'success');
   assert.deepEqual(result.changes, { price: 20399 });
+});
+
+test('editGraphic stringifies numeric edit values before calling generate-variation (Adobe rejects a JSON number for a text tag with "Unsupported text value")', async () => {
+  writeFixtureCatalog([{ id: 'img_3', name: 'TV Product', docId: 'urn:doc:3' }]);
+  expressApi.getTaggedDocument = async () => TV_ELEMENTS_DOC;
+  expressApi.generateVariation = async (docId, tagMappings) => {
+    assert.deepEqual(tagMappings, { productImage: 'https://example.com/tv.png', oldPrice: '33999', price: '30000' });
+    for (const value of Object.values(tagMappings)) assert.equal(typeof value, 'string');
+    return { jobId: 'job-3', statusUrl: 'https://express-api.adobe.io/status/job-3' };
+  };
+  expressApi.pollJobStatus = async () => ({ status: 'succeeded', document: { thumbnailUrl: 'https://example.com/thumb3.png' } });
+  recordEdits('phone-11', 'img_3', { productImage: 'https://example.com/tv.png', oldPrice: 33999, price: 27199 });
+  const image = findTrackedImage('phone-11', 'img_3');
+
+  const result = await expressFlow.editGraphic('phone-11', image, { price: 30000 }, {});
+
+  assert.equal(result.status, 'success');
+  assert.equal(result.price, 30000); // outcome keeps the numeric value for caption formatting
 });
 
 test('selectTvModel returns the 3 fixed TV model options with a list-picker body text and button', () => {
