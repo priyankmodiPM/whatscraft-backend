@@ -70,8 +70,7 @@ async function createDesign(phoneNumber, { customer, model, plan, includeContact
   const steps = [
     `🎨 Creating ${who}'s personalised offer…`,
     '📦 Pulling Maruti Suzuki Arena branding & approved colours…',
-    `📱 Adding the ${car} they were interested in…`,
-    `🛡️ Applying the approved ${plan || 'insurance'} plan…`,
+    `📱 Adding the ${car} with the approved ${plan || 'insurance'} plan…`,
   ];
   if (includeContact) steps.push('📍 Personalising it and adding your contact…');
   await streamProgress(sendText, phoneNumber, steps);

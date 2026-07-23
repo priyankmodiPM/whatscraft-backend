@@ -58,15 +58,7 @@ tap "No, go ahead"
 echo "... waiting ${GEN_PAUSE}s for generation to stream + finish ..."
 sleep "$GEN_PAUSE"
 
-# 5) Governance beat: ask to go below the HQ floor → WC refuses [Keep it / Pick another plan]
-send "Can we go lower than 28,999?"
-sleep "$PAUSE"
-
-# 6) Keep it → WC acknowledges
-tap "Keep it"
-sleep "$PAUSE"
-
-# 7) Translate → WC streams briefly, then sends the Hindi banner
+# 5) Translate → WC streams briefly, then sends the Hindi banner
 send "make it in Hindi"
 
 echo "=== done — verify the two banners (English + Hindi) on WhatsApp and the tool choices in the logs ==="

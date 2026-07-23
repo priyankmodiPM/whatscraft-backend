@@ -271,16 +271,9 @@ async function decideAction(phoneNumber, userMessage) {
     .map((image) => `- ${image.id}: ${image.name}${formatCurrentEdits(image.currentEdits)}`)
     .join('\n');
 
-  // Approved insurance plans + HQ price floor for the personalised-offer flow.
-  const { plans, featured } = getOfferContext();
+  // Approved plans offered by the personalised-offer flow (for the plan picker).
+  const { plans } = getOfferContext();
   const plansLine = plans.join(', ');
-  const govLine = featured
-    ? `${featured.plan} — best approved rate ${featured.price} (was ${featured.was}, saving ${featured.savings})`
-    : '';
-  const savings = featured?.savings || 'a lot';
-  const keepItAck = featured
-    ? `Great — keeping the ${featured.plan} at ${featured.price}. Anything else you'd like to change?`
-    : "Great — keeping it as is. Anything else you'd like to change?";
 
   const messages = [
     {
@@ -295,7 +288,6 @@ Creating a personalised customer offer (create_design) — this is for a car-dea
 2. Then call ask_for_more_information with options ["Yes","No"] asking "Should I add your name & number so <customer> can reach you directly?".
 3. Then call ask_for_more_information with options ["Yes","No, go ahead"] asking "Anything else you'd like to add before I create it?".
 - Then call create_design with the customer's name, the model they were interested in, the chosen plan, and includeContact set from their contact answer.
-Governance — the approved plan prices are the lowest allowed: ${govLine}. If the salesman asks to lower the price, give a bigger discount, or go below the approved rate, DO NOT do it — call ask_for_more_information to explain it's the best HQ-approved rate (already saving ${savings}) with options ["Keep it","Pick another plan"]. When the salesman then taps "Keep it" or otherwise accepts the price, do NOT repeat that explanation — acknowledge briefly by calling ask_for_more_information with NO options, e.g. "${keepItAck}".
 - To translate the offer to another language (e.g. "make it in Hindi"), call edit_graphic — the offer is available in English and Hindi.
 - Always attach options to any yes/no question so the salesman can tap a button instead of typing.
 Choosing between edit_graphic and check_allowed_edits: if the user's message already contains a concrete change and its value (e.g. "make the background marigold", "add my address MG Road Kochi"), call edit_graphic with all of those changes in the edits object. Only call check_allowed_edits when the user asks what can be changed or wants the list of options WITHOUT giving a specific value.
