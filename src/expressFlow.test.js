@@ -5,6 +5,7 @@ const path = require('node:path');
 const os = require('node:os');
 const expressFlow = require('./expressFlow');
 const expressApi = require('./express/expressApi');
+const s3Upload = require('./express/s3Upload');
 const { findTrackedImage, recordEdits } = require('./imageStore');
 const { parseEditOptionId } = require('./interactiveReply');
 
@@ -117,10 +118,15 @@ test('editGraphic applies an allowed edit end-to-end: generates, polls, and retu
   assert.deepEqual(updated.currentEdits, { cta: '20% off' });
 });
 
-test('editGraphic expands the TV placeholder image token to the real S3 URL before calling generate-variation', async () => {
+test('editGraphic expands the TV placeholder image token to a freshly signed S3 URL before calling generate-variation', async () => {
+  const signedUrl = 'https://bucket.s3.us-east-1.amazonaws.com/SonyTv.png?X-Amz-Signature=fake';
+  s3Upload.uploadFromUrl = async (sourceUrl) => {
+    assert.equal(sourceUrl, expressFlow.TV_PRODUCT_SOURCE_IMAGE_URL);
+    return signedUrl;
+  };
   expressApi.getTaggedDocument = async () => TV_ELEMENTS_DOC;
   expressApi.generateVariation = async (docId, tagMappings) => {
-    assert.equal(tagMappings.productImage, expressFlow.TV_PLACEHOLDER_IMAGE_URL);
+    assert.equal(tagMappings.productImage, signedUrl);
     assert.notEqual(tagMappings.productImage, expressFlow.TV_PLACEHOLDER_IMAGE_TOKEN);
     return { jobId: 'job-tv', statusUrl: 'https://express-api.adobe.io/status/job-tv' };
   };
@@ -132,7 +138,7 @@ test('editGraphic expands the TV placeholder image token to the real S3 URL befo
 
   assert.equal(result.status, 'success');
   const updated = findTrackedImage('phone-tv', 'img_1');
-  assert.equal(updated.currentEdits.productImage, expressFlow.TV_PLACEHOLDER_IMAGE_URL);
+  assert.equal(updated.currentEdits.productImage, signedUrl);
 });
 
 test('editGraphic returns an api_error/generate_failed status and does not record the edit when generation fails', async () => {
