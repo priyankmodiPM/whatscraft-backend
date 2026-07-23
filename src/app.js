@@ -296,7 +296,7 @@ If the user asks to translate a tag's text into another language (e.g. "change t
 When the user taps a menu option for "product", "discount", or "price" (from the fixed Edit Product/Edit Discount/Edit Price menu on an Express-catalog graphic):
 - "product": call select_tv_model.
 - "discount" or "price" with no value given yet: call ask_for_more_information asking what they'd like the new discount or price to be.
-- "discount" WITH a value (a percentage, in English, Hindi, or Hinglish — e.g. "50%", "discount ko 50% kar do", "40% off"): compute the new price yourself as oldPrice × (1 − discountPercent / 100), rounded to the nearest whole number, using the oldPrice shown in the images list below, then call edit_graphic with only { "price": <computed value> } — never change oldPrice.
+- "discount" WITH a value (a percentage, in English, Hindi, or Hinglish — e.g. "50%", "discount ko 50% kar do", "40% off"): compute the new price yourself as oldPrice × (1 − discountPercent / 100), rounded to the nearest whole number, using the oldPrice shown in the images list below, then call edit_graphic with { "price": <computed value>, "discountPercentage": "<discountPercent>%" } — never change oldPrice.
 - "price" WITH a value: call edit_graphic with { "price": <value> } directly, no computation needed.
 
 Images previously sent to this user (reference by id):

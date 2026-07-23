@@ -8,32 +8,34 @@
 
 const { recordEdits } = require('./imageStore');
 const expressApi = require('./express/expressApi');
+const s3Upload = require('./express/s3Upload');
 const { buildValueEditId } = require('./interactiveReply');
 const { formatAllowedEdits } = require('./editOptions');
 
 // A "change the product to a TV" request offers 3 fixed models as quick replies.
 //
-// Must be a pre-signed URL on a domain Adobe's generate-variation API accepts for
-// image tagMappings — AWS S3, Dropbox, or Azure (windows.net) only (see
-// VariationDetails.tagMappings in the Express API spec). A Scene7 CDN URL was used
-// here previously and Adobe rejected it, since scene7.com isn't an allowed domain.
-// This S3 URL is itself pre-signed and expires (~12h from generation on 2026-07-22)
-// — it will need to be regenerated/replaced before then to keep working.
-const TV_PLACEHOLDER_IMAGE_URL = 'https://pmodi2.s3.us-west-1.amazonaws.com/SonyTv.png?response-content-disposition=inline&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEBUaCXVzLXdlc3QtMSJHMEUCIAR%2BhaDDo11C4l%2BTaARgAfjNmrzEI4Odss6xvwmkN7pSAiEA8WvY0XqBgrvf97l8oq2vXo9wzPcVOTB%2FmhhOljmHp%2FgqhQQI3v%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARAAGgw3ODU4OTAyNjg3MjQiDAa0WPLo6XDtvyGwYSrZA%2F91LMmqkGuC97Gp1YGw35bNLB1ci0qtqw8DOy%2BNsRyehXLhxaN3H5uifrQunTBrfC9jYEt5IGonDgnatWKi3rSOO2%2BPioo7FamZyIbroeniI%2BMy8mdV9wYCHQweXb3w6YD2eGxAXvDUxGLMnDL60ZAZ4DrcL5o%2BmtMOMvQi6brBdODM5k8YxRDMhnBb1gT4h%2FVuBO67na7LdNwDnx%2BY7Q4Dl4xbYHbrieEl9FRXHk%2Fd4v4rVWCVynJPgmL7m%2B4qwmKJjfX4aeHFt8criBiJzqcaTJdL1UzZsIeqf3icwvHIabvlmCigoHBBLykfuRm6HLkY1onUoh1z0YC5otVgQmss0nz73L4jHwaKIQSLgQDm%2B%2BUwfljiYfz1A8Pfbf5OObziWY%2F4L11qqJzrE0QPanFPaUGdZHbsxBz88JhHtUos61sZ4CPWMrpgLYElxupxegfzE45MXTWqWzIHoqPQlok%2B5137knQLH1VzLoTlS%2BeWg5jADKIWARAbOz2SeaXQ9GoIyZvFVK0%2FJSk1FeWdLRnrabUY%2Bp%2Ba0df6n%2BaS1fQdW2baqPbE%2FzSXOYplregbzUNrPimfWVyb%2BFLt3q5D2qFpAql4BVyZQdH6cT6PNMytziUIkkCZSO6yMOLLhNMGOrcCOM8ML%2FbFF6E9GCVwCIDLfS89AoYr56a9l%2B9FaySJurH%2Fp9hwJ9TvlbLMxZObFZ8LenJhGuk77S%2FlJ2XIl3kpnDkLvmLCP%2BY3ivrmiQxnJigA4k4PiA0cosefbL%2BrzkxiPzUz%2FEh5owO84yCDpGwHlcyz6FggHY8DZY8CNcHnOPG9WWLwl54vxUfsrQ336hzyFQu5Qv1JvXi8MXWexWXziP%2BUemQY5HIUpw2IzrD%2Fl5FDR2KV5TwNhx8RhFJd1YOoi9eJwSyIh2486KVNxLyvkpWLsELNbYfWKo%2Fk7kmWGsTVHzK6I2FWEjRUvwRC2hzilUmMfb08QFdcBAohTW6fc%2BiEzRr1abFFLFKXCxxPnDXEhNltBC3FBYyu%2BXrIK6bqglLBgftc7LbSa1w1HnsLd7iEOqgaRL8%3D&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIA3N6VV2Y2GFNDGC7T%2F20260722%2Fus-west-1%2Fs3%2Faws4_request&X-Amz-Date=20260722T202201Z&X-Amz-Expires=43200&X-Amz-SignedHeaders=host&X-Amz-Signature=95c3bb1f62907709e9d559fb3c6dd6ab1467f85044c74671a9d071a7cf31e199';
+// The source product photo lives on Adobe's Scene7 CDN, but Adobe's own
+// generate-variation API rejects scene7.com for image tagMappings — only AWS S3,
+// Dropbox, or Azure (windows.net) URLs are accepted (see VariationDetails.tagMappings
+// in the Express API spec). So it's re-hosted on S3 (upload + presigned GET URL,
+// via s3Upload.uploadFromUrl) at edit time instead of a one-off hand-uploaded URL
+// that itself expires and has to be manually regenerated.
+const TV_PRODUCT_SOURCE_IMAGE_URL = 'https://s7ap1.scene7.com/is/image/healthmonitor/SonyTv?wid=1000';
 const TV_MODEL_TITLES = ['Sony Bravia K-75', 'LG UA82 AI', 'Samsung UA4'];
 
-// The real S3 URL above is ~1700 chars — WhatsApp interactive list rows cap `id` at
-// 200 chars (#131009 "Row id is too long"), and buildValueEditId round-trips the
-// full edits object through both the row id and (via GPT) the synthetic message
-// text. So the *encoded* edits carry this short token instead of the real URL; it's
-// expanded back to TV_PLACEHOLDER_IMAGE_URL in editGraphic before anything is sent
-// to the Express API.
+// The presigned S3 URL is long — WhatsApp interactive list rows cap `id` at 200
+// chars (#131009 "Row id is too long"), and buildValueEditId round-trips the full
+// edits object through both the row id and (via GPT) the synthetic message text.
+// So the *encoded* edits carry this short token instead of the real URL; it's
+// expanded to a fresh presigned S3 URL in editGraphic before anything is sent to
+// the Express API.
 const TV_PLACEHOLDER_IMAGE_TOKEN = 'tv-model-image-placeholder';
 const TV_MODEL_EDITS = { productImage: TV_PLACEHOLDER_IMAGE_TOKEN, oldPrice: 33999, price: 27199 };
 
-function expandPlaceholderEdits(edits) {
+async function expandPlaceholderEdits(edits) {
   if (edits && edits.productImage === TV_PLACEHOLDER_IMAGE_TOKEN) {
-    return { ...edits, productImage: TV_PLACEHOLDER_IMAGE_URL };
+    const signedUrl = await s3Upload.uploadFromUrl(TV_PRODUCT_SOURCE_IMAGE_URL);
+    return { ...edits, productImage: signedUrl };
   }
   return edits;
 }
@@ -159,7 +161,7 @@ async function checkAllowedEdits(image) {
 // phrase the final reply (matching the user's language) and deliver the image
 // with that phrasing as its caption in one message.
 async function editGraphic(phoneNumber, image, edits, { sendText } = {}) {
-  edits = expandPlaceholderEdits(edits);
+  edits = await expandPlaceholderEdits(edits);
 
   let elements;
   try {
@@ -235,6 +237,6 @@ module.exports = {
   buildTopLevelEditOptions,
   buildDiwaliOfferCaption,
   MAX_DISCOUNT_PERCENT,
-  TV_PLACEHOLDER_IMAGE_URL,
+  TV_PRODUCT_SOURCE_IMAGE_URL,
   TV_PLACEHOLDER_IMAGE_TOKEN,
 };

@@ -12,6 +12,8 @@
     "test": "node --test"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1094.0",
+    "@aws-sdk/s3-request-presigner": "^3.1094.0",
     "express": "^5.0.0",
     "openai": "^6.45.0"
   }
