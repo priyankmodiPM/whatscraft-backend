@@ -43,6 +43,11 @@ function buildDiwaliOfferCaption(result) {
   return expressFlow.buildDiwaliOfferCaption(result);
 }
 
+// Flow 2 (local) — approved plans + governance for the GPT system prompt.
+function getOfferContext() {
+  return localFlow.getOfferContext();
+}
+
 // Router: resolve the image, then hand off to the flow that owns it.
 async function actionCheckAllowedEdits(phoneNumber, imageId) {
   const image = findTrackedImage(phoneNumber, imageId);
@@ -80,4 +85,5 @@ module.exports = {
   actionSelectTvModel,
   buildTopLevelEditOptions,
   buildDiwaliOfferCaption,
+  getOfferContext,
 };

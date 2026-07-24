@@ -10,6 +10,7 @@ const {
   actionSelectTvModel,
   buildTopLevelEditOptions,
   buildDiwaliOfferCaption,
+  getOfferContext,
 } = require('./actions');
 const { parseEditOptionId, messageTextForInteractiveReply } = require('./interactiveReply');
 
@@ -154,23 +155,19 @@ const tools = [
     function: {
       name: 'create_design',
       description:
-        'Create a brand-new single marketing creative from a text description, for an occasion or theme that has NO existing template (e.g. Onam, Pongal). Use when the user wants to make/create/design a new banner or creative from scratch. Do NOT use this for bulk generation from a CSV/Excel file — that is generate_bulk_graphics.',
+        'Create a brand-new PERSONALISED offer creative for a specific customer (e.g. a personalised car-insurance offer for a customer who test drove a model). Call this only AFTER gathering the plan and contact details via ask_for_more_information. Do NOT use this for bulk generation from a CSV/Excel file — that is generate_bulk_graphics.',
       parameters: {
         type: 'object',
         properties: {
-          occasion: { type: 'string', description: 'The occasion or theme, e.g. "Onam"' },
-          products: {
-            type: 'array',
-            items: { type: 'string' },
-            description: 'Products to feature, e.g. ["LG washing machine", "dishwasher"]',
-          },
-          offer: { type: 'string', description: 'The offer or discount to show, e.g. "20% off"' },
-          includeAddress: {
+          customer: { type: 'string', description: "The customer's name, e.g. \"Apoorva\"" },
+          model: { type: 'string', description: "The vehicle/product the customer is interested in, e.g. \"Grand Vitara\"" },
+          plan: { type: 'string', description: "The chosen HQ-approved plan to feature, e.g. \"3-Yr Comprehensive\"" },
+          includeContact: {
             type: 'boolean',
-            description: "Set true if the user has agreed to include their store address on the design; otherwise false.",
+            description: "Set true if the salesman wants their name & number added as the contact on the creative.",
           },
         },
-        required: ['occasion'],
+        required: [],
       },
     },
   },
@@ -274,6 +271,10 @@ async function decideAction(phoneNumber, userMessage) {
     .map((image) => `- ${image.id}: ${image.name}${formatCurrentEdits(image.currentEdits)}`)
     .join('\n');
 
+  // Approved plans offered by the personalised-offer flow (for the plan picker).
+  const { plans } = getOfferContext();
+  const plansLine = plans.join(', ');
+
   const messages = [
     {
       role: 'system',
@@ -282,12 +283,13 @@ Analyze the user's message and conversation history, then call the appropriate t
 Always call exactly one tool — never reply with plain text.
 If the request is ambiguous or missing details, use ask_for_more_information.
 If the user says which field they want to change but hasn't given the new value yet, call ask_for_more_information to ask what to change it to. If a later message in the conversation then supplies that value, call edit_graphic with the field and value instead of asking again.
-Creating a brand-new design (create_design), gather details first with tappable buttons:
-- If the user asks for a design but does NOT mention an occasion/festival, first call ask_for_more_information with options ["Yes","No"] to suggest Onam, e.g. "This is a great time for an Onam offer — want me to generate this for Onam?".
-- Once an occasion is agreed (or was given up front), and before creating, call ask_for_more_information with options ["Yes","No"] to ask "Great! Do you also want to add your store address?".
-- Then call create_design with the occasion, the products and offer mentioned earlier in the conversation, and includeAddress set from their address answer.
-- Always attach options ["Yes","No"] to any yes/no question so the user can tap a button instead of typing.
-- After the design is sent, if the user asks to change something (e.g. "change the language to Malayalam"), call edit_graphic.
+Creating a personalised customer offer (create_design) — this is for a car-dealership salesman making an on-brand offer to send to a specific customer (e.g. "create a personalised insurance offer for Apoorva who test drove the Grand Vitara"). Gather details first with tappable buttons, BEFORE creating:
+1. Call ask_for_more_information asking which HQ-approved plan to feature, with options: [${plansLine}].
+2. Then call ask_for_more_information with options ["Yes","No"] asking "Should I add your name & number so <customer> can reach you directly?".
+3. Then call ask_for_more_information with options ["Yes","No, go ahead"] asking "Anything else you'd like to add before I create it?".
+- Then call create_design with the customer's name, the model they were interested in, the chosen plan, and includeContact set from their contact answer.
+- To translate the offer to another language (e.g. "make it in Hindi"), call edit_graphic — the offer is available in English and Hindi.
+- Always attach options to any yes/no question so the salesman can tap a button instead of typing.
 Choosing between edit_graphic and check_allowed_edits: if the user's message already contains a concrete change and its value (e.g. "make the background marigold", "add my address MG Road Kochi"), call edit_graphic with all of those changes in the edits object. Only call check_allowed_edits when the user asks what can be changed or wants the list of options WITHOUT giving a specific value.
 When editing, prefer these field names when they apply: headline, background, address, offer.
 If the user asks to translate a tag's text into another language (e.g. "change the headline to Hindi", "translate the banner to Malayalam"), translate the current text yourself before calling edit_graphic and pass the translated text as the edit value. For Hindi, use Devanagari script (e.g. "उपलब्ध"); for Malayalam, use Malayalam script (e.g. "ഓണം"). Never use a romanized/transliterated form.
