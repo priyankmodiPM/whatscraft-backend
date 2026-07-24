@@ -20,7 +20,7 @@ const { formatAllowedEdits } = require('./editOptions');
 // in the Express API spec). So it's re-hosted on S3 (upload + presigned GET URL,
 // via s3Upload.uploadFromUrl) at edit time instead of a one-off hand-uploaded URL
 // that itself expires and has to be manually regenerated.
-const TV_PRODUCT_SOURCE_IMAGE_URL = 'https://s7ap1.scene7.com/is/image/healthmonitor/SonyTv?wid=1000';
+const TV_PRODUCT_SOURCE_IMAGE_URL = 'https://s7ap1.scene7.com/is/image/healthmonitor/SonyTv?wid=1000&fmt=png-alpha';
 const TV_MODEL_TITLES = ['Sony Bravia K-75', 'LG UA82 AI', 'Samsung UA4'];
 
 // The presigned S3 URL is long — WhatsApp interactive list rows cap `id` at 200

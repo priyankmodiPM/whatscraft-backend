@@ -30,7 +30,7 @@ test('messageTextForInteractiveReply falls back to the title when the id is unpa
 });
 
 test('buildValueEditId round-trips through parseEditOptionId', () => {
-  const edits = { productImage: 'https://s7ap1.scene7.com/is/image/healthmonitor/SonyTv?wid=1000', oldPrice: 33999, price: 27199 };
+  const edits = { productImage: 'https://s7ap1.scene7.com/is/image/healthmonitor/SonyTv?wid=1000&fmt=png-alpha', oldPrice: 33999, price: 27199 };
   const id = buildValueEditId('img_1', edits);
   const parsed = parseEditOptionId(id);
   assert.deepEqual(parsed, { imageId: 'img_1', edits });
