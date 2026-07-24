@@ -4,7 +4,7 @@
 
 "@aws-sdk/checksums@^3.1000.19":
   version "3.1000.19"
-  resolved "https://artifactory.corp.adobe.com/artifactory/api/npm/npm-adobe-release/@aws-sdk/checksums/-/checksums-3.1000.19.tgz#91d29b5fd576a42547c6da587541759a5b4981d3"
+  resolved "https://registry.yarnpkg.com/@aws-sdk/checksums/-/checksums-3.1000.19.tgz#91d29b5fd576a42547c6da587541759a5b4981d3"
   integrity sha512-Hc4N100RdkuWshKBnhPzmpdftfi9mCLz+OHFELHM1QIgMH4QRUUWyWgfiebta/YX2Bd62wTcm3EqAP8TeXv0gA==
   dependencies:
     "@aws-sdk/core" "^3.976.0"
@@ -15,7 +15,7 @@
 
 "@aws-sdk/client-s3@^3.1094.0":
   version "3.1094.0"
-  resolved "https://artifactory.corp.adobe.com/artifactory/api/npm/npm-adobe-release/@aws-sdk/client-s3/-/client-s3-3.1094.0.tgz#3cfdc562da7330785bf3a2ea8f16b29650e7e33b"
+  resolved "https://registry.yarnpkg.com/@aws-sdk/client-s3/-/client-s3-3.1094.0.tgz#3cfdc562da7330785bf3a2ea8f16b29650e7e33b"
   integrity sha512-Qkz3HXW9bBajTO1Pgvbxkj2THliDnYPFBaJwIF1mDmnPe1E7reV9V/QJxBz14slIvdcU0tiyB+z37Qns0EY9Zg==
   dependencies:
     "@aws-sdk/checksums" "^3.1000.19"
@@ -32,7 +32,7 @@
 
 "@aws-sdk/core@^3.976.0":
   version "3.976.0"
-  resolved "https://artifactory.corp.adobe.com/artifactory/api/npm/npm-adobe-release/@aws-sdk/core/-/core-3.976.0.tgz#c30d080b4b2ea8e22c07d9d5338c0331050f92da"
+  resolved "https://registry.yarnpkg.com/@aws-sdk/core/-/core-3.976.0.tgz#c30d080b4b2ea8e22c07d9d5338c0331050f92da"
   integrity sha512-0cjRaEdlVoOrsNb9pP5q1Syyc8pXw5xSj2Np2ryReRTr9FppIIRVSdZK4lbnfmc2Hvgux/xBOUU6baB7z8//uA==
   dependencies:
     "@aws-sdk/types" "^3.974.2"
@@ -46,7 +46,7 @@
 
 "@aws-sdk/credential-provider-env@^3.972.60":
   version "3.972.60"
-  resolved "https://artifactory.corp.adobe.com/artifactory/api/npm/npm-adobe-release/@aws-sdk/credential-provider-env/-/credential-provider-env-3.972.60.tgz#84fc3b6c950834ccbb84b4b508a4e79027495f46"
+  resolved "https://registry.yarnpkg.com/@aws-sdk/credential-provider-env/-/credential-provider-env-3.972.60.tgz#84fc3b6c950834ccbb84b4b508a4e79027495f46"
   integrity sha512-BAkxdoe7tpDDqCghGpuOeHQRbm/2znVvOQm0AvpQbA2tbfMN46doN4zx65fv85ImP3KADwc2zQPmbrlI9MPfMg==
   dependencies:
     "@aws-sdk/core" "^3.976.0"
@@ -57,7 +57,7 @@
 
 "@aws-sdk/credential-provider-http@^3.972.62":
   version "3.972.62"
-  resolved "https://artifactory.corp.adobe.com/artifactory/api/npm/npm-adobe-release/@aws-sdk/credential-provider-http/-/credential-provider-http-3.972.62.tgz#2104724d4f7ba0838aed0be86a19a2bdc92aee47"
+  resolved "https://registry.yarnpkg.com/@aws-sdk/credential-provider-http/-/credential-provider-http-3.972.62.tgz#2104724d4f7ba0838aed0be86a19a2bdc92aee47"
   integrity sha512-g/0fGqKTb9xpKdd9AtpmV5Eo3DFKbnkpA2+w0peISSlu7NfAoWOuYBFxsu+yWBtxU89ka55ezoZBCbFaS8pjYQ==
   dependencies:
     "@aws-sdk/core" "^3.976.0"
@@ -70,7 +70,7 @@
 
 "@aws-sdk/credential-provider-ini@^3.973.5":
   version "3.973.5"
-  resolved "https://artifactory.corp.adobe.com/artifactory/api/npm/npm-adobe-release/@aws-sdk/credential-provider-ini/-/credential-provider-ini-3.973.5.tgz#83bab3633491e5b54d08e49e242f831a07aa3080"
+  resolved "https://registry.yarnpkg.com/@aws-sdk/credential-provider-ini/-/credential-provider-ini-3.973.5.tgz#83bab3633491e5b54d08e49e242f831a07aa3080"
   integrity sha512-ylubazcRfq2TVus/qXucSXeC42Qdjp5HQxTu68K/BsdMiZlcSLD1zkpoCgApXZX1Y6YJhtGGs7ZHhO/GuIgBlw==
   dependencies:
     "@aws-sdk/core" "^3.976.0"
@@ -89,7 +89,7 @@
 
 "@aws-sdk/credential-provider-login@^3.972.67":
   version "3.972.67"
-  resolved "https://artifactory.corp.adobe.com/artifactory/api/npm/npm-adobe-release/@aws-sdk/credential-provider-login/-/credential-provider-login-3.972.67.tgz#7d0cf698c69f5130a4c6c5adb4450f52d81e15a9"
+  resolved "https://registry.yarnpkg.com/@aws-sdk/credential-provider-login/-/credential-provider-login-3.972.67.tgz#7d0cf698c69f5130a4c6c5adb4450f52d81e15a9"
   integrity sha512-CCygIKJ9YbI3n84OClSaSppkgKKHVj2TGT33c6FRORZrYNZQ1POmD+ip0FLYokiJAK7sSdc3YVkOsBm90oxWMQ==
   dependencies:
     "@aws-sdk/core" "^3.976.0"
@@ -101,7 +101,7 @@
 
 "@aws-sdk/credential-provider-node@^3.972.71":
   version "3.972.71"
-  resolved "https://artifactory.corp.adobe.com/artifactory/api/npm/npm-adobe-release/@aws-sdk/credential-provider-node/-/credential-provider-node-3.972.71.tgz#d87fe6da001575845e6332ad118f8f721dfebf52"
+  resolved "https://registry.yarnpkg.com/@aws-sdk/credential-provider-node/-/credential-provider-node-3.972.71.tgz#d87fe6da001575845e6332ad118f8f721dfebf52"
   integrity sha512-HIg7Q2osBzajQwL+1Vkyh2E7Gim3eTNb9RHIsOxDGjW0eZg4oEKtRs5sioCnc73ilhaOm4gX2lHVF8J7+nt2rg==
   dependencies:
     "@aws-sdk/credential-provider-env" "^3.972.60"
@@ -118,7 +118,7 @@
 
 "@aws-sdk/credential-provider-process@^3.972.60":
   version "3.972.60"
-  resolved "https://artifactory.corp.adobe.com/artifactory/api/npm/npm-adobe-release/@aws-sdk/credential-provider-process/-/credential-provider-process-3.972.60.tgz#528c752fb31016568fb81b7c05b345d41c611d31"
+  resolved "https://registry.yarnpkg.com/@aws-sdk/credential-provider-process/-/credential-provider-process-3.972.60.tgz#528c752fb31016568fb81b7c05b345d41c611d31"
   integrity sha512-YIo3f99hM43QdYG8hDzwGemnR/pU95b0kramqSJUTleCqaB7+HwKf7YZFHqvOgTqZTPx/mRmNIqoDRr3U0Z3Tw==
   dependencies:
     "@aws-sdk/core" "^3.976.0"
@@ -129,7 +129,7 @@
 
 "@aws-sdk/credential-provider-sso@^3.973.4":
   version "3.973.4"
-  resolved "https://artifactory.corp.adobe.com/artifactory/api/npm/npm-adobe-release/@aws-sdk/credential-provider-sso/-/credential-provider-sso-3.973.4.tgz#e6e3cdb687e4acfd7ab228c73102c05e08fb988d"
+  resolved "https://registry.yarnpkg.com/@aws-sdk/credential-provider-sso/-/credential-provider-sso-3.973.4.tgz#e6e3cdb687e4acfd7ab228c73102c05e08fb988d"
   integrity sha512-BPdmL8sSBOCv4ngZ+3LHxyc3CNqDCEK37CHioCk7zGrTMY5sUtkH8q+o6qA80nn6w3/fyBPGNE7OIRlmoOxRQA==
   dependencies:
     "@aws-sdk/core" "^3.976.0"
@@ -142,7 +142,7 @@
 
 "@aws-sdk/credential-provider-web-identity@^3.972.66":
   version "3.972.66"
-  resolved "https://artifactory.corp.adobe.com/artifactory/api/npm/npm-adobe-release/@aws-sdk/credential-provider-web-identity/-/credential-provider-web-identity-3.972.66.tgz#31d0c8b061edc5a87aa6f624dbaac2eb479a6639"
+  resolved "https://registry.yarnpkg.com/@aws-sdk/credential-provider-web-identity/-/credential-provider-web-identity-3.972.66.tgz#31d0c8b061edc5a87aa6f624dbaac2eb479a6639"
   integrity sha512-kSAziJboOmZmsR9/MTbiNjowl2BPes1bQuJpne4qAZ62ubi8fjfr/aupJSQje6udBoYxXTQbsL0e0kby2la3ng==
   dependencies:
     "@aws-sdk/core" "^3.976.0"
@@ -154,7 +154,7 @@
 
 "@aws-sdk/middleware-sdk-s3@^3.972.65":
   version "3.972.65"
-  resolved "https://artifactory.corp.adobe.com/artifactory/api/npm/npm-adobe-release/@aws-sdk/middleware-sdk-s3/-/middleware-sdk-s3-3.972.65.tgz#9b49df5deb68dee5d5da4d630a6ce3676408de5e"
+  resolved "https://registry.yarnpkg.com/@aws-sdk/middleware-sdk-s3/-/middleware-sdk-s3-3.972.65.tgz#9b49df5deb68dee5d5da4d630a6ce3676408de5e"
   integrity sha512-udwNhRfDTfCB98mAHjjgsnKQlxygB4e0X+Obne/XjJpvVsF0YCQC8ZErd/8Z6IPoLQjtiKHzwqEDbZiLrJEnOg==
   dependencies:
     "@aws-sdk/core" "^3.976.0"
@@ -166,7 +166,7 @@
 
 "@aws-sdk/nested-clients@^3.997.34":
   version "3.997.34"
-  resolved "https://artifactory.corp.adobe.com/artifactory/api/npm/npm-adobe-release/@aws-sdk/nested-clients/-/nested-clients-3.997.34.tgz#bd371ab54f97b6d24d464743e4deb82403d6b890"
+  resolved "https://registry.yarnpkg.com/@aws-sdk/nested-clients/-/nested-clients-3.997.34.tgz#bd371ab54f97b6d24d464743e4deb82403d6b890"
   integrity sha512-Y9REVrSwmLM+Qy6sZJ7ofMC2S3Hr3tPP/4CzL5U1olPP7OGoF+6+Px0E49cVQBtSxJtyeLJMf0UaBErfeSahAA==
   dependencies:
     "@aws-sdk/core" "^3.976.0"
@@ -180,7 +180,7 @@
 
 "@aws-sdk/s3-request-presigner@^3.1094.0":
   version "3.1094.0"
-  resolved "https://artifactory.corp.adobe.com/artifactory/api/npm/npm-adobe-release/@aws-sdk/s3-request-presigner/-/s3-request-presigner-3.1094.0.tgz#480b21fe5073cc6e08516ddc6898cd3c0cdd8b6b"
+  resolved "https://registry.yarnpkg.com/@aws-sdk/s3-request-presigner/-/s3-request-presigner-3.1094.0.tgz#480b21fe5073cc6e08516ddc6898cd3c0cdd8b6b"
   integrity sha512-7kG3C37tPWEpz8TyHslFhi2TrQ10und7ijerO0V/Ljq2uxBWVi4SFcol8yp2gM09HYzMnkWCfOxAKJZ2OZvClw==
   dependencies:
     "@aws-sdk/core" "^3.976.0"
@@ -192,7 +192,7 @@
 
 "@aws-sdk/signature-v4-multi-region@^3.996.41":
   version "3.996.41"
-  resolved "https://artifactory.corp.adobe.com/artifactory/api/npm/npm-adobe-release/@aws-sdk/signature-v4-multi-region/-/signature-v4-multi-region-3.996.41.tgz#1ac6743366e2382b73ed14af4b08d21de0bf1ed9"
+  resolved "https://registry.yarnpkg.com/@aws-sdk/signature-v4-multi-region/-/signature-v4-multi-region-3.996.41.tgz#1ac6743366e2382b73ed14af4b08d21de0bf1ed9"
   integrity sha512-QMUytg+FQMGouc8gHS00KoYih3+N6cqmVI/pQGOIo7Nr7OpQaiXjSYOuL+vsPZ1tymY4LAQ8MYcHJmws5LRxng==
   dependencies:
     "@aws-sdk/types" "^3.974.2"
@@ -202,7 +202,7 @@
 
 "@aws-sdk/token-providers@3.1092.0":
   version "3.1092.0"
-  resolved "https://artifactory.corp.adobe.com/artifactory/api/npm/npm-adobe-release/@aws-sdk/token-providers/-/token-providers-3.1092.0.tgz#3178452622c2cac79ed4a0c77733a0edaf9e6b76"
+  resolved "https://registry.yarnpkg.com/@aws-sdk/token-providers/-/token-providers-3.1092.0.tgz#3178452622c2cac79ed4a0c77733a0edaf9e6b76"
   integrity sha512-hBYUAr6iBLNFcsiWTgtBb0stdSw39VOUq4Sp4A5caCNf66BAZplWN4FleKrVpJx5li2YgdnK2DqoFSMWC642FQ==
   dependencies:
     "@aws-sdk/core" "^3.976.0"
@@ -214,7 +214,7 @@
 
 "@aws-sdk/types@^3.974.2":
   version "3.974.2"
-  resolved "https://artifactory.corp.adobe.com/artifactory/api/npm/npm-adobe-release/@aws-sdk/types/-/types-3.974.2.tgz#05e7ccac417735e0786d430d2d5cc139047a08da"
+  resolved "https://registry.yarnpkg.com/@aws-sdk/types/-/types-3.974.2.tgz#05e7ccac417735e0786d430d2d5cc139047a08da"
   integrity sha512-3W6IUtSxFbH6X7Wb7DzGCV5QiFQsd0g8bOfntpmDxQlzBoKWUMBu/JPQR0DwkE+Hpnxd6db1tXbOwdeHddG6cA==
   dependencies:
     "@smithy/types" "^4.16.1"
@@ -222,7 +222,7 @@
 
 "@aws-sdk/xml-builder@^3.972.36":
   version "3.972.36"
-  resolved "https://artifactory.corp.adobe.com/artifactory/api/npm/npm-adobe-release/@aws-sdk/xml-builder/-/xml-builder-3.972.36.tgz#966c17ded23b970b5e41cbab5d1abf85a304b99e"
+  resolved "https://registry.yarnpkg.com/@aws-sdk/xml-builder/-/xml-builder-3.972.36.tgz#966c17ded23b970b5e41cbab5d1abf85a304b99e"
   integrity sha512-RdGmS1GLrtaTOLE1ElSluMldNrpk9Emq6uYs8SS8iHlu5xTAmM9rRkM91o48+rIRryBtyO9t+uLYCoMG6jVMVA==
   dependencies:
     "@smithy/types" "^4.16.1"
@@ -230,12 +230,12 @@
 
 "@aws/lambda-invoke-store@^0.3.0":
   version "0.3.0"
-  resolved "https://artifactory.corp.adobe.com/artifactory/api/npm/npm-adobe-release/@aws/lambda-invoke-store/-/lambda-invoke-store-0.3.0.tgz#708802d987f8e17bdf4af4de1031660ce1cdd65f"
+  resolved "https://registry.yarnpkg.com/@aws/lambda-invoke-store/-/lambda-invoke-store-0.3.0.tgz#708802d987f8e17bdf4af4de1031660ce1cdd65f"
   integrity sha512-sl4Bm6yiMNYrZKkqqDFWN0UfnWhlS8ivKxrYl+6t0gCLrqr8y3B2IqZZbFRkfaVVp7C/baApyh71P+LeE1A2sQ==
 
 "@smithy/core@^3.29.4", "@smithy/core@^3.29.8":
   version "3.29.8"
-  resolved "https://artifactory.corp.adobe.com/artifactory/api/npm/npm-adobe-release/@smithy/core/-/core-3.29.8.tgz#6466029ff27285257cf9bb4864fdb632c870ccf0"
+  resolved "https://registry.yarnpkg.com/@smithy/core/-/core-3.29.8.tgz#6466029ff27285257cf9bb4864fdb632c870ccf0"
   integrity sha512-rpCbCV+TimOBi3VLNBMmtTvgfOWcFIEAru3+TFlG87SL2F+te4jOnnNR+cf3uR4eJ5Qf4LnT80fqnBKgPRS6zA==
   dependencies:
     "@smithy/types" "^4.16.1"
@@ -243,7 +243,7 @@
 
 "@smithy/credential-provider-imds@^4.4.9":
   version "4.4.13"
-  resolved "https://artifactory.corp.adobe.com/artifactory/api/npm/npm-adobe-release/@smithy/credential-provider-imds/-/credential-provider-imds-4.4.13.tgz#33dce458f03ee3a262b5379eff37e335eaea70a9"
+  resolved "https://registry.yarnpkg.com/@smithy/credential-provider-imds/-/credential-provider-imds-4.4.13.tgz#33dce458f03ee3a262b5379eff37e335eaea70a9"
   integrity sha512-X+2HNZhWi5i3rJsCas0LPf6fTQUaKyJ40zd8aTO/bwpRfpU3biYaqLr7C1WMibL7PVKJalpi1PyybjGPNoHC8Q==
   dependencies:
     "@smithy/core" "^3.29.8"
@@ -252,7 +252,7 @@
 
 "@smithy/fetch-http-handler@^5.6.6":
   version "5.6.10"
-  resolved "https://artifactory.corp.adobe.com/artifactory/api/npm/npm-adobe-release/@smithy/fetch-http-handler/-/fetch-http-handler-5.6.10.tgz#a50908b47d16a8f5c56e98762c2e27339a8c19ab"
+  resolved "https://registry.yarnpkg.com/@smithy/fetch-http-handler/-/fetch-http-handler-5.6.10.tgz#a50908b47d16a8f5c56e98762c2e27339a8c19ab"
   integrity sha512-5/Yj9mS2JjTsB3B8ZX7euh77mrY9aXW23ag1yAmFykSRmA6vldqBrgqmSeQ50EjY+5SB8+aE4w14B6LKbBVEhQ==
   dependencies:
     "@smithy/core" "^3.29.8"
@@ -261,7 +261,7 @@
 
 "@smithy/node-http-handler@^4.9.6":
   version "4.9.10"
-  resolved "https://artifactory.corp.adobe.com/artifactory/api/npm/npm-adobe-release/@smithy/node-http-handler/-/node-http-handler-4.9.10.tgz#e03a874620cec491f787787b8bf6072d45adabc7"
+  resolved "https://registry.yarnpkg.com/@smithy/node-http-handler/-/node-http-handler-4.9.10.tgz#e03a874620cec491f787787b8bf6072d45adabc7"
   integrity sha512-ETQz9v/Z+nTQc6fRWTXxUpxJqwpmzB3Tn3WKAdHwWkeT+m+HE5czs6GNG8vW+4vyxXSls65RVcvOZwk7Q/PS/Q==
   dependencies:
     "@smithy/core" "^3.29.8"
@@ -270,7 +270,7 @@
 
 "@smithy/signature-v4@^5.6.5":
   version "5.6.9"
-  resolved "https://artifactory.corp.adobe.com/artifactory/api/npm/npm-adobe-release/@smithy/signature-v4/-/signature-v4-5.6.9.tgz#09ede51303925677a401f9759b18041ff46a1070"
+  resolved "https://registry.yarnpkg.com/@smithy/signature-v4/-/signature-v4-5.6.9.tgz#09ede51303925677a401f9759b18041ff46a1070"
   integrity sha512-g5rnEii/mkT0mjVJmlsaOfyNBtHNTecD9Lo4NP8D5HzMUEnZNpz7/FbvBCjNcV4vteHFAxOGiLUYNxPkDZZAPw==
   dependencies:
     "@smithy/core" "^3.29.8"
@@ -279,7 +279,7 @@
 
 "@smithy/types@^4.16.1":
   version "4.16.1"
-  resolved "https://artifactory.corp.adobe.com/artifactory/api/npm/npm-adobe-release/@smithy/types/-/types-4.16.1.tgz#19e199c234829a51c085caf63f0bb17bb80187e4"
+  resolved "https://registry.yarnpkg.com/@smithy/types/-/types-4.16.1.tgz#19e199c234829a51c085caf63f0bb17bb80187e4"
   integrity sha512-0JFs3V2y2M9tKW5na/qxe69Zv+uxLMO7QBbhxF/FHu/Gp2NFZAAL9tWl9PU02xxo07pb3G9FTyjNc6D5uZrJIg==
   dependencies:
     tslib "^2.6.2"
@@ -309,7 +309,7 @@ body-parser@^2.2.1:
 
 bowser@^2.11.0:
   version "2.14.1"
-  resolved "https://artifactory.corp.adobe.com/artifactory/api/npm/npm-adobe-release/bowser/-/bowser-2.14.1.tgz#4ea39bf31e305184522d7ad7bfd91389e4f0cb79"
+  resolved "https://registry.yarnpkg.com/bowser/-/bowser-2.14.1.tgz#4ea39bf31e305184522d7ad7bfd91389e4f0cb79"
   integrity sha512-tzPjzCxygAKWFOJP011oxFHs57HzIhOEracIgAePE4pqB3LikALKnSzUyU4MGs9/iCEUuHlAJTjTc5M+u7YEGg==
 
 bytes@^3.1.2, bytes@~3.1.2:
@@ -753,7 +753,7 @@ toidentifier@~1.0.1:
 
 tslib@^2.6.2:
   version "2.8.1"
-  resolved "https://artifactory.corp.adobe.com/artifactory/api/npm/npm-adobe-release/tslib/-/tslib-2.8.1.tgz#612efe4ed235d567e8aba5f2a5fab70280ade83f"
+  resolved "https://registry.yarnpkg.com/tslib/-/tslib-2.8.1.tgz#612efe4ed235d567e8aba5f2a5fab70280ade83f"
   integrity sha512-oJFu94HQb+KVduSUQL7wnpmqnfmLsOA/nAh6b6EH0wCEoK0/mPeXU6c3wKDV83MkOuHPRHtSXKKU99IBazS/2w==
 
 type-is@^2.0.1, type-is@^2.1.0:
