@@ -118,27 +118,30 @@ test('editGraphic applies an allowed edit end-to-end: generates, polls, and retu
   assert.deepEqual(updated.currentEdits, { cta: '20% off' });
 });
 
-test('editGraphic expands the TV placeholder image token to a freshly signed S3 URL before calling generate-variation', async () => {
-  const signedUrl = 'https://bucket.s3.us-east-1.amazonaws.com/SonyTv.png?X-Amz-Signature=fake';
-  s3Upload.uploadFromUrl = async (sourceUrl) => {
-    assert.equal(sourceUrl, expressFlow.TV_PRODUCT_SOURCE_IMAGE_URL);
-    return signedUrl;
-  };
-  expressApi.getTaggedDocument = async () => TV_ELEMENTS_DOC;
-  expressApi.generateVariation = async (docId, tagMappings) => {
-    assert.equal(tagMappings.productImage, signedUrl);
-    assert.notEqual(tagMappings.productImage, expressFlow.TV_PLACEHOLDER_IMAGE_TOKEN);
-    return { jobId: 'job-tv', statusUrl: 'https://express-api.adobe.io/status/job-tv' };
-  };
-  expressApi.pollJobStatus = async () => ({ status: 'succeeded', document: { thumbnailUrl: 'https://example.com/tv-thumb.png' } });
+test('editGraphic serves a product-change request from the hardcoded banner and makes no Express/S3 calls', async () => {
+  s3Upload.uploadFromUrl = async () => { throw new Error('should not be called'); };
+  expressApi.getTaggedDocument = async () => { throw new Error('should not be called'); };
+  expressApi.generateVariation = async () => { throw new Error('should not be called'); };
   const image = catalogImage('phone-tv');
+  const sentTexts = [];
 
   const edits = { productImage: expressFlow.TV_PLACEHOLDER_IMAGE_TOKEN, oldPrice: '33999', price: '27199' };
-  const result = await expressFlow.editGraphic('phone-tv', image, edits, {});
+  const result = await expressFlow.editGraphic('phone-tv', image, edits, {
+    sendText: async (phone, text) => sentTexts.push([phone, text]),
+  });
 
-  assert.equal(result.status, 'success');
+  assert.deepEqual(result, {
+    status: 'success',
+    productName: 'Croma Earbuds',
+    changes: edits,
+    thumbnailUrl: expressFlow.HARDCODED_PRODUCT_UPDATE_THUMBNAIL_URL,
+    price: '27199',
+    oldPrice: '33999',
+  });
+  assert.deepEqual(sentTexts, [['phone-tv', '⏳ Applying your edit and re-rendering with Adobe Express…']]);
+
   const updated = findTrackedImage('phone-tv', 'img_1');
-  assert.equal(updated.currentEdits.productImage, signedUrl);
+  assert.equal(updated.currentEdits.productImage, expressFlow.TV_PLACEHOLDER_IMAGE_TOKEN);
 });
 
 test('editGraphic returns an api_error/generate_failed status and does not record the edit when generation fails', async () => {
