@@ -32,10 +32,24 @@ function truncateTitle(title, maxLength = 20) {
   return lastSpace > 0 ? truncated.slice(0, lastSpace) : truncated;
 }
 
+// Matches the emoji-prefixed style already used by the express flow's fixed
+// Edit Product/Discount/Price menu (see expressFlow.TOP_LEVEL_EDIT_FIELDS).
+const FIELD_EMOJIS = {
+  language: '🌐',
+  headline: '📝',
+  background: '🎨',
+  address: '📍',
+  offer: '🏷️',
+};
+
+function emojiForField(name) {
+  return FIELD_EMOJIS[name] || '✏️';
+}
+
 function buildEditOptions(elements, imageId) {
   return elements.map((element) => ({
     id: `edit:${imageId}:${element.name}`,
-    title: truncateTitle(`Change ${humanizeFieldName(element.name)}`),
+    title: truncateTitle(`${emojiForField(element.name)} Change ${humanizeFieldName(element.name)}`),
   }));
 }
 

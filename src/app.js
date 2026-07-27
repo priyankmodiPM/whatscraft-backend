@@ -272,6 +272,9 @@ async function decideAction(phoneNumber, userMessage) {
     .join('\n');
 
   // Approved plans offered by the personalised-offer flow (for the plan picker).
+  // No emoji here — plan names (e.g. "Engine Protect combo") already sit right at
+  // WhatsApp's 20-char reply-button title cap, and adding an emoji prefix pushes
+  // them over it, causing a #131009 "Button title length invalid" API error.
   const { plans } = getOfferContext();
   const plansLine = plans.join(', ');
 
@@ -285,8 +288,8 @@ If the request is ambiguous or missing details, use ask_for_more_information.
 If the user says which field they want to change but hasn't given the new value yet, call ask_for_more_information to ask what to change it to. If a later message in the conversation then supplies that value, call edit_graphic with the field and value instead of asking again.
 Creating a personalised customer offer (create_design) — this is for a car-dealership salesman making an on-brand offer to send to a specific customer (e.g. "create a personalised insurance offer for Apoorva who test drove the Grand Vitara"). Gather details first with tappable buttons, BEFORE creating:
 1. Call ask_for_more_information asking which HQ-approved plan to feature, with options: [${plansLine}].
-2. Then call ask_for_more_information with options ["Yes","No"] asking "Should I add your name & number so <customer> can reach you directly?".
-3. Then call ask_for_more_information with options ["Yes","No, go ahead"] asking "Anything else you'd like to add before I create it?".
+2. Then call ask_for_more_information with options ["✅ Yes","🙅 No"] asking "Should I add your name & number so <customer> can reach you directly?".
+3. Then call ask_for_more_information with options ["✅ Yes","➡️ No, go ahead"] asking "Anything else you'd like to add before I create it?".
 - Then call create_design with the customer's name, the model they were interested in, the chosen plan, and includeContact set from their contact answer.
 - To translate the offer to another language (e.g. "make it in Hindi"), call edit_graphic — the offer is available in English and Hindi.
 - Always attach options to any yes/no question so the salesman can tap a button instead of typing.

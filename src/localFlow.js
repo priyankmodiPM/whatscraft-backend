@@ -31,7 +31,7 @@ function sleep(ms) {
 // via GEN_STEP_DELAY_MS.
 async function streamProgress(sendText, phoneNumber, messages) {
   if (typeof sendText !== 'function') return;
-  const delay = Number(process.env.GEN_STEP_DELAY_MS ?? 1800);
+  const delay = Number(process.env.GEN_STEP_DELAY_MS ?? 3500);
   for (const message of messages) {
     await sendText(phoneNumber, message);
     await sleep(delay);
