@@ -39,6 +39,14 @@ const TV_MODEL_EDITS = { productImage: TV_PLACEHOLDER_IMAGE_TOKEN, oldPrice: 339
 const HARDCODED_PRODUCT_UPDATE_THUMBNAIL_URL =
   'https://s7ap1.scene7.com/is/image/healthmonitor/Croma-Diwali-Banner-product-update?wid=1000';
 
+// TEMP: discount-change requests are served from this pre-rendered banner instead
+// of the real Adobe Express pipeline. GPT sends a "discountPercentage" key (see the
+// system prompt in app.js) alongside the computed price, but that key isn't one of
+// the document's tagged elements — the real pipeline would always reject it as a
+// disallowed field — so it's routed here instead, same as the product-change bypass.
+const HARDCODED_DISCOUNT_UPDATE_THUMBNAIL_URL =
+  'https://s7ap1.scene7.com/is/image/healthmonitor/Croma-Diwali-Banner-discount-update?wid=1000';
+
 async function expandPlaceholderEdits(edits) {
   if (edits && edits.productImage === TV_PLACEHOLDER_IMAGE_TOKEN) {
     const signedUrl = await s3Upload.uploadFromUrl(TV_PRODUCT_SOURCE_IMAGE_URL);
@@ -169,6 +177,7 @@ async function checkAllowedEdits(image) {
 // with that phrasing as its caption in one message.
 async function editGraphic(phoneNumber, image, edits, { sendText } = {}) {
   const isProductUpdate = Boolean(edits && Object.prototype.hasOwnProperty.call(edits, 'productImage'));
+  const isDiscountUpdate = Boolean(edits && Object.prototype.hasOwnProperty.call(edits, 'discountPercentage'));
 
   if (isProductUpdate) {
     if (typeof sendText === 'function') await sendText(phoneNumber, '⏳ Applying your edit and re-rendering with Adobe Express…');
@@ -177,6 +186,28 @@ async function editGraphic(phoneNumber, image, edits, { sendText } = {}) {
     recordEdits(phoneNumber, image.id, edits);
 
     const outcome = { status: 'success', productName: image.name, changes: edits, thumbnailUrl: HARDCODED_PRODUCT_UPDATE_THUMBNAIL_URL };
+    if (mergedEdits.price !== undefined) outcome.price = mergedEdits.price;
+    if (mergedEdits.oldPrice !== undefined) outcome.oldPrice = mergedEdits.oldPrice;
+    return outcome;
+  }
+
+  if (isDiscountUpdate) {
+    // discountPercentage isn't a tagged document field (only productImage/oldPrice/
+    // price are) — drop it before recording so it doesn't taint currentEdits for a
+    // later real edit's tagMappings.
+    const { discountPercentage, ...taggedEdits } = edits;
+
+    const requestedPercent = parsePercent(discountPercentage);
+    if (requestedPercent !== null && requestedPercent > MAX_DISCOUNT_PERCENT) {
+      return { status: 'discount_capped', productName: image.name, maxPercent: MAX_DISCOUNT_PERCENT };
+    }
+
+    if (typeof sendText === 'function') await sendText(phoneNumber, '⏳ Applying your edit and re-rendering with Adobe Express…');
+
+    const mergedEdits = { ...image.currentEdits, ...taggedEdits };
+    recordEdits(phoneNumber, image.id, taggedEdits);
+
+    const outcome = { status: 'success', productName: image.name, changes: taggedEdits, thumbnailUrl: HARDCODED_DISCOUNT_UPDATE_THUMBNAIL_URL };
     if (mergedEdits.price !== undefined) outcome.price = mergedEdits.price;
     if (mergedEdits.oldPrice !== undefined) outcome.oldPrice = mergedEdits.oldPrice;
     return outcome;
@@ -261,4 +292,5 @@ module.exports = {
   TV_PRODUCT_SOURCE_IMAGE_URL,
   TV_PLACEHOLDER_IMAGE_TOKEN,
   HARDCODED_PRODUCT_UPDATE_THUMBNAIL_URL,
+  HARDCODED_DISCOUNT_UPDATE_THUMBNAIL_URL,
 };

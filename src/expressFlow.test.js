@@ -144,6 +144,49 @@ test('editGraphic serves a product-change request from the hardcoded banner and 
   assert.equal(updated.currentEdits.productImage, expressFlow.TV_PLACEHOLDER_IMAGE_TOKEN);
 });
 
+test('editGraphic serves a discount-change request from the hardcoded banner and makes no Express calls, stripping discountPercentage before recording', async () => {
+  expressApi.getTaggedDocument = async () => { throw new Error('should not be called'); };
+  expressApi.generateVariation = async () => { throw new Error('should not be called'); };
+  const image = catalogImage('phone-discount');
+  const sentTexts = [];
+
+  const edits = { price: 20399, discountPercentage: '40%' };
+  const result = await expressFlow.editGraphic('phone-discount', image, edits, {
+    sendText: async (phone, text) => sentTexts.push([phone, text]),
+  });
+
+  assert.deepEqual(result, {
+    status: 'success',
+    productName: 'Croma Earbuds',
+    changes: { price: 20399 },
+    thumbnailUrl: expressFlow.HARDCODED_DISCOUNT_UPDATE_THUMBNAIL_URL,
+    price: 20399,
+  });
+  assert.deepEqual(sentTexts, [['phone-discount', '⏳ Applying your edit and re-rendering with Adobe Express…']]);
+
+  const updated = findTrackedImage('phone-discount', 'img_1');
+  assert.deepEqual(updated.currentEdits, { price: 20399 });
+  assert.ok(!('discountPercentage' in updated.currentEdits));
+});
+
+test('editGraphic caps a discount-change request above 40% without calling Express', async () => {
+  expressApi.getTaggedDocument = async () => { throw new Error('should not be called'); };
+  expressApi.generateVariation = async () => { throw new Error('should not be called'); };
+  const image = catalogImage('phone-discount-2');
+
+  const result = await expressFlow.editGraphic(
+    'phone-discount-2',
+    image,
+    { price: 16999, discountPercentage: '50%' },
+    {}
+  );
+
+  assert.deepEqual(result, { status: 'discount_capped', productName: 'Croma Earbuds', maxPercent: 40 });
+
+  const updated = findTrackedImage('phone-discount-2', 'img_1');
+  assert.deepEqual(updated.currentEdits, {});
+});
+
 test('editGraphic returns an api_error/generate_failed status and does not record the edit when generation fails', async () => {
   expressApi.getTaggedDocument = async () => SAMPLE_ELEMENTS_DOC;
   expressApi.generateVariation = async () => { throw new Error('generateVariation failed 500: boom'); };
