@@ -32,6 +32,13 @@ const TV_MODEL_TITLES = ['Sony Bravia K-75', 'LG UA82 AI', 'Samsung UA4'];
 const TV_PLACEHOLDER_IMAGE_TOKEN = 'tv-model-image-placeholder';
 const TV_MODEL_EDITS = { productImage: TV_PLACEHOLDER_IMAGE_TOKEN, oldPrice: 33999, price: 27199 };
 
+// TEMP: product-change requests ("select_tv_model" / any edit carrying a
+// productImage) are served from this pre-rendered banner instead of the real
+// Adobe Express generate-variation pipeline — the user still sees the usual
+// "calling Express API" progress message, but no Express/S3 network calls happen.
+const HARDCODED_PRODUCT_UPDATE_THUMBNAIL_URL =
+  'https://s7ap1.scene7.com/is/image/healthmonitor/Croma-Diwali-Banner-product-update?wid=1000';
+
 async function expandPlaceholderEdits(edits) {
   if (edits && edits.productImage === TV_PLACEHOLDER_IMAGE_TOKEN) {
     const signedUrl = await s3Upload.uploadFromUrl(TV_PRODUCT_SOURCE_IMAGE_URL);
@@ -161,6 +168,20 @@ async function checkAllowedEdits(image) {
 // phrase the final reply (matching the user's language) and deliver the image
 // with that phrasing as its caption in one message.
 async function editGraphic(phoneNumber, image, edits, { sendText } = {}) {
+  const isProductUpdate = Boolean(edits && Object.prototype.hasOwnProperty.call(edits, 'productImage'));
+
+  if (isProductUpdate) {
+    if (typeof sendText === 'function') await sendText(phoneNumber, '⏳ Applying your edit and re-rendering with Adobe Express…');
+
+    const mergedEdits = { ...image.currentEdits, ...edits };
+    recordEdits(phoneNumber, image.id, edits);
+
+    const outcome = { status: 'success', productName: image.name, changes: edits, thumbnailUrl: HARDCODED_PRODUCT_UPDATE_THUMBNAIL_URL };
+    if (mergedEdits.price !== undefined) outcome.price = mergedEdits.price;
+    if (mergedEdits.oldPrice !== undefined) outcome.oldPrice = mergedEdits.oldPrice;
+    return outcome;
+  }
+
   edits = await expandPlaceholderEdits(edits);
 
   let elements;
@@ -239,4 +260,5 @@ module.exports = {
   MAX_DISCOUNT_PERCENT,
   TV_PRODUCT_SOURCE_IMAGE_URL,
   TV_PLACEHOLDER_IMAGE_TOKEN,
+  HARDCODED_PRODUCT_UPDATE_THUMBNAIL_URL,
 };
