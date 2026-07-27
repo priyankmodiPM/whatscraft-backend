@@ -15,11 +15,16 @@ function loadOfferDesign() {
   return JSON.parse(fs.readFileSync(filePath, 'utf8'));
 }
 
-// Approved plans + featured governance details, injected into the GPT system
-// prompt so it can offer the plan buttons and refuse below-floor price requests.
+// Approved plans + featured governance details, plus the fallback customer/model
+// and known-model list used by the deterministic Flow-2 trigger (flow2Session.js).
 function getOfferContext() {
   const design = loadOfferDesign();
-  return { plans: design.plans || [], featured: design.featured || null };
+  return {
+    plans: design.plans || [],
+    featured: design.featured || null,
+    defaults: design.defaults || {},
+    models: design.models || [],
+  };
 }
 
 function sleep(ms) {

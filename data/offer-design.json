@@ -11,6 +11,8 @@
     "was": "₹52,499/year",
     "savings": "₹23,500/year"
   },
+  "defaults": { "customer": "Apoorva", "model": "Grand Vitara" },
+  "models": ["Grand Vitara", "Brezza", "Swift", "Baleno", "Ertiga", "Fronx", "Jimny", "Dzire", "Ciaz", "XL6"],
   "slots": {
     "editable": [
       { "name": "language", "type": "text", "aliases": ["lang", "translate", "translation", "headline", "text"] }
