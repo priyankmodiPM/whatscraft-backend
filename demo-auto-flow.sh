@@ -11,7 +11,7 @@ set -euo pipefail
 BASE_URL="${BASE_URL:-http://localhost:3000}"
 PHONE="${PHONE:-919899860983}"
 PAUSE="${PAUSE:-10}"
-GEN_PAUSE="${GEN_PAUSE:-25}"
+GEN_PAUSE="${GEN_PAUSE:-30}"
 
 # Send a free-text WhatsApp message.
 send() {
@@ -49,12 +49,12 @@ tap "3-Yr Comprehensive"
 sleep "$PAUSE"
 
 # 3) Yes to contact → WC asks "anything else?" [Yes / No, go ahead]
-tap "Yes"
+tap "✅ Yes"
 sleep "$PAUSE"
 
 # 4) Nothing else → WC streams progress for a few seconds, then sends the English banner.
 #    Wait for that generation to finish before the next step so messages don't interleave.
-tap "No, go ahead"
+tap "➡️ No, go ahead"
 echo "... waiting ${GEN_PAUSE}s for generation to stream + finish ..."
 sleep "$GEN_PAUSE"
 

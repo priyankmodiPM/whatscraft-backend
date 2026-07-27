@@ -120,7 +120,7 @@ test('checkAllowedEdits lists the editable slots from the schema', async () => {
   const result = localFlow.checkAllowedEdits(image);
 
   assert.equal(result.type, 'edit_options');
-  assert.deepEqual(result.options.map((o) => o.title), ['Change language']);
+  assert.deepEqual(result.options.map((o) => o.title), ['🌐 Change language']);
 });
 
 test('getOfferContext exposes the approved plans and featured governance', () => {
