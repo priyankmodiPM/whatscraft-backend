@@ -13,6 +13,7 @@ const {
   getOfferContext,
 } = require('./actions');
 const { parseEditOptionId, messageTextForInteractiveReply } = require('./interactiveReply');
+const flow2Session = require('./flow2Session');
 
 const app = express();
 app.use(express.json());
@@ -28,6 +29,20 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY, baseURL: openaiB
 
 // In-memory conversation history per phone number (last 20 messages kept)
 const conversationHistory = new Map();
+
+// Active Flow-2 gathering sessions, keyed by phone number. While a session is
+// present, inbound messages are handled deterministically by the flow2Session
+// state machine (plan → contact → confirm → create) and the LLM is bypassed —
+// that's what makes the question sequence deterministic. See flow2Session.js.
+const flow2Sessions = new Map();
+
+// Flow 2 (the personalised-offer flow) is gated to a single demo phone number so
+// arbitrary inbound numbers can't trigger it — everyone else is restricted to the
+// existing behaviour (Flow 1 + generic tools). Substring match, env-overridable.
+const FLOW2_PHONE = process.env.FLOW2_PHONE || '9899860983';
+function isFlow2Phone(phoneNumber) {
+  return String(phoneNumber).includes(FLOW2_PHONE);
+}
 
 function getHistory(phoneNumber) {
   return conversationHistory.get(phoneNumber) || [];
@@ -139,6 +154,42 @@ function sendQuickReplies(to, question, options) {
   return sendButtons(to, question, buttons);
 }
 
+// ── Flow 2 deterministic sequence executor ───────────────────────────────────
+
+// Execute a descriptor returned by flow2Session (ask/reask a question, or create
+// the design). Keeps all the WhatsApp side effects here; flow2Session stays pure.
+async function runFlow2Action(phoneNumber, action) {
+  if (!action) return;
+  if (action.type === 'ask' || action.type === 'reask') {
+    await sendQuickReplies(phoneNumber, action.question, action.options);
+    appendHistory(phoneNumber, 'assistant', action.question);
+    return;
+  }
+  if (action.type === 'create') {
+    console.log('[flow2] create_design (deterministic)', action.args);
+    const result = await actionCreateDesign(phoneNumber, action.args, { sendImage, sendText });
+    if (typeof result === 'string') {
+      // Error path — the flow couldn't send the image, so surface the message.
+      await sendText(phoneNumber, result);
+      appendHistory(phoneNumber, 'assistant', result);
+    } else {
+      // Success — image + caption already sent by the flow.
+      appendHistory(phoneNumber, 'assistant', result.historyText);
+    }
+  }
+}
+
+// Handle one inbound message while a Flow-2 session is active. Fully deterministic:
+// no LLM call — the answer is fuzzy-matched and the state machine picks the next step.
+async function handleFlow2Turn(phoneNumber, userText) {
+  const { plans } = getOfferContext();
+  const session = flow2Sessions.get(phoneNumber);
+  const { state, action } = flow2Session.advance(session, userText, { plans });
+  if (state) flow2Sessions.set(phoneNumber, state);
+  else flow2Sessions.delete(phoneNumber);
+  await runFlow2Action(phoneNumber, action);
+}
+
 // ── GPT tool definitions ─────────────────────────────────────────────────────
 
 const tools = [
@@ -155,17 +206,12 @@ const tools = [
     function: {
       name: 'create_design',
       description:
-        'Create a brand-new PERSONALISED offer creative for a specific customer (e.g. a personalised car-insurance offer for a customer who test drove a model). Call this only AFTER gathering the plan and contact details via ask_for_more_information. Do NOT use this for bulk generation from a CSV/Excel file — that is generate_bulk_graphics.',
+        'Signal that the user wants a brand-new PERSONALISED offer creative for a specific customer (e.g. a personalised car-insurance offer for a customer who test drove a model). Call this as SOON as you recognise that intent, passing only customer and model. The system then gathers the plan and contact details with tappable buttons and drives the rest of the sequence — so do NOT pass plan or includeContact, and do NOT ask any questions first. Do NOT use this for bulk generation from a CSV/Excel file — that is generate_bulk_graphics.',
       parameters: {
         type: 'object',
         properties: {
           customer: { type: 'string', description: "The customer's name, e.g. \"Apoorva\"" },
           model: { type: 'string', description: "The vehicle/product the customer is interested in, e.g. \"Grand Vitara\"" },
-          plan: { type: 'string', description: "The chosen HQ-approved plan to feature, e.g. \"3-Yr Comprehensive\"" },
-          includeContact: {
-            type: 'boolean',
-            description: "Set true if the salesman wants their name & number added as the contact on the creative.",
-          },
         },
         required: [],
       },
@@ -271,12 +317,9 @@ async function decideAction(phoneNumber, userMessage) {
     .map((image) => `- ${image.id}: ${image.name}${formatCurrentEdits(image.currentEdits)}`)
     .join('\n');
 
-  // Approved plans offered by the personalised-offer flow (for the plan picker).
-  // No emoji here — plan names (e.g. "Engine Protect combo") already sit right at
-  // WhatsApp's 20-char reply-button title cap, and adding an emoji prefix pushes
-  // them over it, causing a #131009 "Button title length invalid" API error.
-  const { plans } = getOfferContext();
-  const plansLine = plans.join(', ');
+  // Note: the personalised-offer plan picker is no longer driven from this prompt —
+  // the deterministic Flow-2 state machine (flow2Session.js) asks for the plan with
+  // tappable buttons after create_design fires, so the plans list isn't needed here.
 
   const messages = [
     {
@@ -286,13 +329,10 @@ Analyze the user's message and conversation history, then call the appropriate t
 Always call exactly one tool — never reply with plain text.
 If the request is ambiguous or missing details, use ask_for_more_information.
 If the user says which field they want to change but hasn't given the new value yet, call ask_for_more_information to ask what to change it to. If a later message in the conversation then supplies that value, call edit_graphic with the field and value instead of asking again.
-Creating a personalised customer offer (create_design) — this is for a car-dealership salesman making an on-brand offer to send to a specific customer (e.g. "create a personalised insurance offer for Apoorva who test drove the Grand Vitara"). Gather details first with tappable buttons, BEFORE creating:
-1. Call ask_for_more_information asking which HQ-approved plan to feature, with options: [${plansLine}].
-2. Then call ask_for_more_information with options ["✅ Yes","🙅 No"] asking "Should I add your name & number so <customer> can reach you directly?".
-3. Then call ask_for_more_information with options ["✅ Yes","➡️ No, go ahead"] asking "Anything else you'd like to add before I create it?".
-- Then call create_design with the customer's name, the model they were interested in, the chosen plan, and includeContact set from their contact answer.
+Creating a personalised customer offer (create_design) — this is for a car-dealership salesman making an on-brand offer to send to a specific customer (e.g. "Apoorva test drove the Grand Vitara and asked about insurance — make her a personalised offer"). The message may contain typos.
+- As SOON as you recognise this intent, call create_design immediately, passing only the customer's name and the model you can extract from the conversation. If either is unclear, still call create_design with whatever you have (or leave it blank).
+- Do NOT ask about the plan, the contact, or "anything else" yourself, and do NOT call ask_for_more_information for this flow — the system gathers the plan and contact with tappable buttons and drives the rest of the sequence deterministically after create_design is called. Never pass plan or includeContact yourself.
 - To translate the offer to another language (e.g. "make it in Hindi"), call edit_graphic — the offer is available in English and Hindi.
-- Always attach options to any yes/no question so the salesman can tap a button instead of typing.
 Choosing between edit_graphic and check_allowed_edits: if the user's message already contains a concrete change and its value (e.g. "make the background marigold", "add my address MG Road Kochi"), call edit_graphic with all of those changes in the edits object. Only call check_allowed_edits when the user asks what can be changed or wants the list of options WITHOUT giving a specific value.
 When editing, prefer these field names when they apply: headline, background, address, offer.
 If the user asks to translate a tag's text into another language (e.g. "change the headline to Hindi", "translate the banner to Malayalam"), translate the current text yourself before calling edit_graphic and pass the translated text as the edit value. For Hindi, use Devanagari script (e.g. "उपलब्ध"); for Malayalam, use Malayalam script (e.g. "ഓണം"). Never use a romanized/transliterated form.
@@ -382,6 +422,26 @@ app.post('/', async (req, res) => {
 
       appendHistory(phoneNumber, 'user', userText);
 
+      // Flow 2 is gated to the demo phone. On that phone, a fresh "create a
+      // personalised offer" message (fuzzy-matched, typo-tolerant) (re)starts the
+      // gathering session from step 1 — checked BEFORE the in-progress bypass so a
+      // re-prompt always restarts rather than being read as an answer.
+      if (isFlow2Phone(phoneNumber) && flow2Session.isCreateOfferIntent(userText)) {
+        const { plans, defaults, models } = getOfferContext();
+        const offerArgs = flow2Session.extractOffer(userText, { defaults, models });
+        const { state, action } = flow2Session.start(offerArgs, { plans });
+        flow2Sessions.set(phoneNumber, state);
+        console.log('[flow2] (re)start via fuzzy trigger', offerArgs);
+        await runFlow2Action(phoneNumber, action);
+        continue;
+      }
+
+      // Flow-2 gathering in progress → drive it deterministically, skip the LLM.
+      if (flow2Sessions.has(phoneNumber)) {
+        await handleFlow2Turn(phoneNumber, userText);
+        continue;
+      }
+
       const gptMessage = await decideAction(phoneNumber, userText);
       const toolCall = gptMessage.tool_calls?.[0];
       if (!toolCall) continue;
@@ -400,15 +460,24 @@ app.post('/', async (req, res) => {
           break;
 
         case 'create_design': {
-          // Progress is streamed from inside the flow (with the product/offer context).
-          // On success the flow already sent the image+caption, so skip the extra text.
-          const result = await actionCreateDesign(phoneNumber, args, { sendImage, sendText });
-          if (typeof result === 'string') {
-            replyText = result;
-          } else {
-            replyText = result.historyText;
-            skipSend = true;
+          // Fallback Flow-2 entry: the deterministic fuzzy trigger above catches
+          // most create requests before the LLM runs, but this handles phrasings it
+          // missed. Gated to the demo phone — other numbers are restricted to the
+          // current behaviour, so a stray create_design there is politely declined.
+          if (!isFlow2Phone(phoneNumber)) {
+            replyText = "I can help you update your existing campaign graphics — tell me what you'd like to change.";
+            break;
           }
+          // The LLM only DETECTS intent + extracts customer/model; it never creates
+          // directly. Starting a session hands sequencing to the deterministic state
+          // machine (plan → contact → confirm, fuzzy-matched) before create_design
+          // ever runs — the model can't skip the questions.
+          const { plans, defaults } = getOfferContext();
+          const startArgs = { customer: args.customer || defaults.customer, model: args.model || defaults.model };
+          const { state, action } = flow2Session.start(startArgs, { plans });
+          flow2Sessions.set(phoneNumber, state);
+          await runFlow2Action(phoneNumber, action);
+          skipSend = true;
           break;
         }
 
