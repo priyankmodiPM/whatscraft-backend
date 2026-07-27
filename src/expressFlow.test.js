@@ -259,17 +259,34 @@ test('editGraphic stringifies numeric edit values before calling generate-variat
   assert.equal(result.price, 30000); // outcome keeps the numeric value for caption formatting
 });
 
-test('selectTvModel returns the 3 fixed TV model options with a list-picker body text and button', () => {
+test('selectTvModel returns the fixed product options (TVs, washing machines, phones, microwaves) with a list-picker body text and button', () => {
   const result = expressFlow.selectTvModel('img_1');
 
   assert.equal(result.type, 'edit_options');
   assert.equal(result.bodyText, 'Which product do you want?');
   assert.equal(result.buttonText, 'Choose product');
-  assert.equal(result.options.length, 3);
+  assert.equal(result.options.length, 10);
   assert.deepEqual(
     result.options.map((option) => option.title),
-    ['Sony Bravia K-75', 'LG UA82 AI', 'Samsung UA4']
+    [
+      'Sony Bravia K-75',
+      'LG UA82 AI',
+      'Samsung UA4',
+      'LG 7kg Front Load',
+      'Samsung 6.5kg Top Load',
+      'IFB 8kg Front Load',
+      'Apple iPhone 15',
+      'Samsung Galaxy S24',
+      'IFB 20L Convection',
+      'LG 28L Solo',
+    ]
   );
+});
+
+test('selectTvModel stays within WhatsApp\'s 10-row list limit', () => {
+  const result = expressFlow.selectTvModel('img_1');
+
+  assert.ok(result.options.length <= 10, `too many rows (${result.options.length}) for a WhatsApp list message`);
 });
 
 test('selectTvModel gives every option a unique id (WhatsApp list rows must not repeat ids)', () => {

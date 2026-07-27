@@ -21,7 +21,26 @@ const { formatAllowedEdits } = require('./editOptions');
 // via s3Upload.uploadFromUrl) at edit time instead of a one-off hand-uploaded URL
 // that itself expires and has to be manually regenerated.
 const TV_PRODUCT_SOURCE_IMAGE_URL = 'https://s7ap1.scene7.com/is/image/healthmonitor/SonyTv?wid=1000&fmt=png-alpha';
-const TV_MODEL_TITLES = ['Sony Bravia K-75', 'LG UA82 AI', 'Samsung UA4'];
+
+// The product picker spans a few Croma categories, not just TVs — capped at 10
+// entries total since WhatsApp list messages allow at most 10 rows (see
+// app.js sendList).
+const PRODUCT_MODEL_TITLES = [
+  // TVs
+  'Sony Bravia K-75',
+  'LG UA82 AI',
+  'Samsung UA4',
+  // Washing machines
+  'LG 7kg Front Load',
+  'Samsung 6.5kg Top Load',
+  'IFB 8kg Front Load',
+  // Phones
+  'Apple iPhone 15',
+  'Samsung Galaxy S24',
+  // Microwaves
+  'IFB 20L Convection',
+  'LG 28L Solo',
+];
 
 // The presigned S3 URL is long — WhatsApp interactive list rows cap `id` at 200
 // chars (#131009 "Row id is too long"), and buildValueEditId round-trips the full
@@ -30,7 +49,7 @@ const TV_MODEL_TITLES = ['Sony Bravia K-75', 'LG UA82 AI', 'Samsung UA4'];
 // expanded to a fresh presigned S3 URL in editGraphic before anything is sent to
 // the Express API.
 const TV_PLACEHOLDER_IMAGE_TOKEN = 'tv-model-image-placeholder';
-const TV_MODEL_EDITS = { productImage: TV_PLACEHOLDER_IMAGE_TOKEN, oldPrice: 33999, price: 27199 };
+const PRODUCT_MODEL_EDITS = { productImage: TV_PLACEHOLDER_IMAGE_TOKEN, oldPrice: 33999, price: 27199 };
 
 // TEMP: product-change requests ("select_tv_model" / any edit carrying a
 // productImage) are served from this pre-rendered banner instead of the real
@@ -61,12 +80,12 @@ function formatINR(amount) {
 
 // The success caption for img_1 (Croma Diwali offer) — a fixed festive template
 // rather than a GPT-phrased one-liner, so the banner's own promo copy carries
-// through into the message text. Falls back to the TV_MODEL_EDITS constants for
-// price/oldPrice when an edit (e.g. a lone "change price" request) hasn't gone
+// through into the message text. Falls back to the PRODUCT_MODEL_EDITS constants
+// for price/oldPrice when an edit (e.g. a lone "change price" request) hasn't gone
 // through selectTvModel, so both are always populated.
 function buildDiwaliOfferCaption({ price, oldPrice } = {}) {
-  const displayPrice = formatINR(price ?? TV_MODEL_EDITS.price);
-  const displayOldPrice = formatINR(oldPrice ?? TV_MODEL_EDITS.oldPrice);
+  const displayPrice = formatINR(price ?? PRODUCT_MODEL_EDITS.price);
+  const displayOldPrice = formatINR(oldPrice ?? PRODUCT_MODEL_EDITS.oldPrice);
 
   return `🪔✨ DIWALI DHAMAKA OFFER! ✨🪔
 
@@ -136,18 +155,19 @@ function impliesExcessiveDiscount(mergedEdits, requestedKeys) {
   return impliedDiscountPercent > MAX_DISCOUNT_PERCENT + ROUNDING_TOLERANCE_PERCENT;
 }
 
-// TV model picker — each option id encodes the full productImage/price edits so a
-// tap tells GPT exactly what to apply (see interactiveReply.buildValueEditId). All 3
-// models share the same placeholder edits, so the title is passed as a discriminator
-// to keep the 3 row ids unique — WhatsApp rejects list messages with duplicate row ids.
-// Presented as a WhatsApp list (buttonText set) rather than reply buttons.
+// Product model picker — each option id encodes the full productImage/price edits
+// so a tap tells GPT exactly what to apply (see interactiveReply.buildValueEditId).
+// All models share the same placeholder edits, so the title is passed as a
+// discriminator to keep the row ids unique — WhatsApp rejects list messages with
+// duplicate row ids. Presented as a WhatsApp list (buttonText set) rather than
+// reply buttons.
 function selectTvModel(imageId) {
   return {
     type: 'edit_options',
     bodyText: 'Which product do you want?',
     buttonText: 'Choose product',
-    options: TV_MODEL_TITLES.map((title) => ({
-      id: buildValueEditId(imageId, TV_MODEL_EDITS, title),
+    options: PRODUCT_MODEL_TITLES.map((title) => ({
+      id: buildValueEditId(imageId, PRODUCT_MODEL_EDITS, title),
       title,
     })),
   };
