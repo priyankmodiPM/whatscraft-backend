@@ -14,6 +14,8 @@ const {
 } = require('./actions');
 const { parseEditOptionId, messageTextForInteractiveReply } = require('./interactiveReply');
 const flow2Session = require('./flow2Session');
+const scriptedFlow = require('./scriptedFlow');
+const { loadScriptedFlows, flowForPhone } = require('./scriptedFlows');
 
 const app = express();
 app.use(express.json());
@@ -36,10 +38,21 @@ const conversationHistory = new Map();
 // that's what makes the question sequence deterministic. See flow2Session.js.
 const flow2Sessions = new Map();
 
+// Scripted demo flows (Subway "Finals Week", Kia "Seltos follow-up") — each gated to
+// its own hardcoded demo number (see scriptedFlows.js). While a scripted phone has an
+// active session, inbound messages are driven entirely by the data-defined script
+// (scriptedFlow.js) and the LLM is bypassed. A fresh message from a scripted phone
+// with no session starts the flow from its kickoff step.
+const scriptedFlows = loadScriptedFlows();
+const scriptedSessions = new Map();
+
 // Flow 2 (the personalised-offer flow) is gated to a single demo phone number so
 // arbitrary inbound numbers can't trigger it — everyone else is restricted to the
 // existing behaviour (Flow 1 + generic tools). Substring match, env-overridable.
-const FLOW2_PHONE = process.env.FLOW2_PHONE || '9899860983';
+// NOTE: default moved off '9899860983' — that number is now the Kia scripted flow,
+// and the old value was a substring of it. Apoorva's flow is kept but parked on an
+// unused number (set FLOW2_PHONE to re-enable it on a real number).
+const FLOW2_PHONE = process.env.FLOW2_PHONE || '910000000001';
 function isFlow2Phone(phoneNumber) {
   return String(phoneNumber).includes(FLOW2_PHONE);
 }
@@ -59,19 +72,38 @@ function appendHistory(phoneNumber, role, content) {
 
 async function whatsappPost(body) {
   const url = `https://graph.facebook.com/v19.0/${whatsappPhoneNumberId}/messages`;
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${whatsappToken}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(body),
-  });
+  // A short label so each outbound is traceable in the logs (type + recipient).
+  const label = `${body.type}${body.interactive ? `/${body.interactive.type}` : ''} → ${body.to}`;
+
+  if (!whatsappPhoneNumberId || !whatsappToken) {
+    console.error(`[whatsapp:send SKIPPED] ${label} — missing WHATSAPP_PHONE_NUMBER_ID or WHATSAPP_TOKEN`);
+  }
+
+  let response;
+  try {
+    response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${whatsappToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    });
+  } catch (err) {
+    // Network-level failure (DNS/timeout) — never reaches the API.
+    console.error(`[whatsapp:send FAILED] ${label} — network error: ${err.message}`);
+    throw err;
+  }
+
   if (!response.ok) {
     const text = await response.text();
+    console.error(`[whatsapp:send FAILED] ${label} — HTTP ${response.status}: ${text}`);
     throw new Error(`WhatsApp API error ${response.status}: ${text}`);
   }
-  return response.json();
+
+  const json = await response.json();
+  console.log(`[whatsapp:send ok] ${label} — message id ${json?.messages?.[0]?.id ?? '(none)'}`);
+  return json;
 }
 
 function sendText(to, text) {
@@ -152,6 +184,46 @@ async function sendEditOptions(to, result) {
 function sendQuickReplies(to, question, options) {
   const buttons = options.slice(0, BUTTONS_PER_MESSAGE).map((label) => ({ id: `qr:${label}`, title: label }));
   return sendButtons(to, question, buttons);
+}
+
+// ── Scripted-flow executor ────────────────────────────────────────────────────
+
+// Deliver the messages a scripted step returns. The engine (scriptedFlow.js) stays
+// pure and just describes what to send; all WhatsApp side effects live here. After an
+// image we pause (IMAGE_DELIVERY_DELAY_MS) so a following buttons/text message can't
+// land before the image — same reasoning as the edit-menu delay elsewhere.
+async function runScriptedSends(phoneNumber, sends) {
+  for (const msg of sends || []) {
+    if (msg.type === 'text') {
+      await sendText(phoneNumber, msg.text);
+      appendHistory(phoneNumber, 'assistant', msg.text);
+    } else if (msg.type === 'image') {
+      await sendImage(phoneNumber, msg.link, msg.caption);
+      if (msg.caption) appendHistory(phoneNumber, 'assistant', msg.caption);
+      await sleep(IMAGE_DELIVERY_DELAY_MS);
+    } else if (msg.type === 'buttons') {
+      await sendQuickReplies(phoneNumber, msg.body, msg.options);
+      appendHistory(phoneNumber, 'assistant', msg.body);
+    }
+  }
+}
+
+// Handle one inbound message for a scripted demo phone. Starts the flow if there's no
+// active session, otherwise advances it. Fully deterministic — no LLM call.
+async function handleScriptedTurn(phoneNumber, flow, userText) {
+  const active = scriptedSessions.get(phoneNumber);
+  const { session, sends } = active
+    ? scriptedFlow.advance(flow, active, userText)
+    : scriptedFlow.start(flow);
+  console.log('[scripted]', {
+    phone: phoneNumber,
+    from: active?.stepKey || '(kickoff)',
+    to: session?.stepKey || '(end)',
+    sends: sends.length,
+  });
+  if (session) scriptedSessions.set(phoneNumber, session);
+  else scriptedSessions.delete(phoneNumber);
+  await runScriptedSends(phoneNumber, sends);
 }
 
 // ── Flow 2 deterministic sequence executor ───────────────────────────────────
@@ -405,7 +477,23 @@ app.post('/', async (req, res) => {
   res.status(200).end();
 
   try {
-    const messages = req.body?.entry?.[0]?.changes?.[0]?.value?.messages;
+    const value = req.body?.entry?.[0]?.changes?.[0]?.value;
+
+    // Delivery-status callbacks (sent / delivered / read / failed) arrive on THIS same
+    // webhook, separate from inbound messages. Surface them: a message can be accepted
+    // by the send API ([whatsapp:send ok] with a wamid) yet still FAIL to deliver, and
+    // the reason (e.g. 131047 re-engagement / 131026 undeliverable) only appears here.
+    const statuses = value?.statuses;
+    if (statuses?.length) {
+      for (const s of statuses) {
+        const errs = (s.errors || [])
+          .map((e) => `${e.code} ${e.title}${e.error_data?.details ? ` (${e.error_data.details})` : ''}`)
+          .join('; ');
+        console.log(`[whatsapp:status] ${s.status} → ${s.recipient_id} — id ${s.id}${errs ? ` — ERROR ${errs}` : ''}`);
+      }
+    }
+
+    const messages = value?.messages;
     if (!messages?.length) return;
 
     for (const message of messages) {
@@ -421,6 +509,15 @@ app.post('/', async (req, res) => {
       console.log(`Message from ${phoneNumber}: ${userText}`);
 
       appendHistory(phoneNumber, 'user', userText);
+
+      // Scripted demo phones (Subway, Kia) run their fixed script end-to-end and
+      // never touch the LLM: no session ⇒ kickoff, session present ⇒ advance. Checked
+      // first so these numbers are always fully deterministic.
+      const scripted = flowForPhone(scriptedFlows, phoneNumber);
+      if (scripted) {
+        await handleScriptedTurn(phoneNumber, scripted, userText);
+        continue;
+      }
 
       // Flow 2 is gated to the demo phone. On that phone, a fresh "create a
       // personalised offer" message (fuzzy-matched, typo-tolerant) (re)starts the

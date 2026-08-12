@@ -1,0 +1,5 @@
+{
+  "_comment": "Single source of truth: which WhatsApp number triggers which scripted flow. IMPORTANT: WhatsApp delivers the sender as the FULL international number without '+', so the SIM +91-98998-60983 always arrives as '919899860983' (NOT the bare 10-digit form). A number can own only one flow at a time. TESTING NOW on the single SIM 919899860983 → Subway; Kia is parked on an unused number. To test Kia on the same SIM, swap the two values. FINAL two-number setup: subway=918328145692, kia=919899860983. Env vars SUBWAY_PHONE / KIA_PHONE override these. Restart after editing.",
+  "subway": "918328145692",
+  "kia": "919899860983"
+}

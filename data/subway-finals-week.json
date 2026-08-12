@@ -1,0 +1,196 @@
+{
+  "_comment": "Subway 'Finals Week' scripted demo flow (see docs QSR note). Gated to SUBWAY_PHONE. Swap the placeholder cdn.whatscraft.local banner URLs for your hosted v0–v4 images. Copy/steps are data-only; edit freely. Engine: src/scriptedFlow.js.",
+  "phone": "918328145692",
+  "start": "kickoff",
+  "steps": {
+    "kickoff": {
+      "onEnter": [
+        {
+          "type": "image",
+          "link": "https://s7ap1.scene7.com/is/image/varunAEM/Subway-v1?cache=off",
+          "caption": "Amit — Finals Week is live 🏏 HQ's default offer: 20% off any 6-inch Sub, across all outlets, all week.\n\nHere's your store's version — ready to send as-is, or tap Edit to make it yours."
+        },
+        {
+          "type": "buttons",
+          "body": "What would you like to do?",
+          "options": ["✏️ Edit", "📤 Send as-is"]
+        }
+      ],
+      "await": {
+        "kind": "buttons",
+        "options": [
+          { "match": "Edit", "next": "ask_edit" },
+          { "match": "Send as-is", "next": "sent_as_is" }
+        ],
+        "reask": [
+          {
+            "type": "buttons",
+            "body": "Tap Edit to make it yours, or Send as-is.",
+            "options": ["✏️ Edit", "📤 Send as-is"]
+          }
+        ]
+      }
+    },
+
+    "sent_as_is": {
+      "onEnter": [
+        {
+          "type": "text",
+          "text": "Sent as-is ✅ Finals Week offer queued to your opted-in lists (Office 400 · College 400) from Subway's official number. 🏏"
+        }
+      ]
+    },
+
+    "ask_edit": {
+      "onEnter": [
+        {
+          "type": "text",
+          "text": "Sure — tell me what you'd like to change, or describe the offer you want."
+        }
+      ],
+      "await": { "kind": "any", "next": "combo" }
+    },
+
+    "combo": {
+      "onEnter": [
+        { "type": "text", "text": "Good call — combos do better during Finals Week. Building it now… ⏳" },
+        {
+          "type": "image",
+          "link": "https://s7ap1.scene7.com/is/image/varunAEM/Subway-v2?cache=off",
+          "caption": "Chicken Tikka Sub + Cookie + Cold Drink 🥤🍪"
+        },
+        {
+          "type": "buttons",
+          "body": "For pricing: Sub + Cookie + Drink separately run ₹350. I'd suggest ₹250 for the combo — nearby outlets running this combo this week are converting best at that price point, better than combos priced higher. Want to go with ₹250?",
+          "options": ["✅ Yes, ₹250", "✏️ Different price"]
+        }
+      ],
+      "await": {
+        "kind": "buttons",
+        "options": [
+          { "match": "Yes 250", "next": "matchday" },
+          { "match": "Different price", "next": "combo_reprice" }
+        ],
+        "reask": [
+          {
+            "type": "buttons",
+            "body": "Tap ✅ Yes, ₹250 to lock the combo price, or ✏️ Different price.",
+            "options": ["✅ Yes, ₹250", "✏️ Different price"]
+          }
+        ]
+      }
+    },
+
+    "combo_reprice": {
+      "onEnter": [
+        {
+          "type": "buttons",
+          "body": "No problem — for this demo I'd recommend ₹250 (best-converting this week). Shall I go with it?",
+          "options": ["✅ Yes, ₹250"]
+        }
+      ],
+      "await": {
+        "kind": "buttons",
+        "options": [{ "match": "Yes 250", "next": "matchday" }],
+        "reask": [
+          { "type": "buttons", "body": "Tap ✅ Yes, ₹250 to continue.", "options": ["✅ Yes, ₹250"] }
+        ]
+      }
+    },
+
+    "matchday": {
+      "onEnter": [
+        { "type": "text", "text": "Done ✅ ₹350 struck through, ₹250 highlighted, cricket-ball motif added to the corner." },
+        {
+          "type": "image",
+          "link": "https://s7ap1.scene7.com/is/image/varunAEM/Subway-v3?cache=off",
+          "caption": "Here's your preview — how's this looking?"
+        }
+      ],
+      "await": { "kind": "any", "next": "gluten_free" }
+    },
+
+    "gluten_free": {
+      "onEnter": [
+        {
+          "type": "buttons",
+          "body": "I can't label the combo gluten-free as it stands — the regular sub roll has wheat, so that'd be a false claim and an allergen-compliance risk. Three accurate ways to still win the gym crowd:\n\n🥖 Swap to GF base — rebuild the sub on our approved gluten-free bread, then the tag is genuinely accurate.\n🥗 Feature Veggie Delite — highlight the salad instead, tagged \"Lighter option\".\n💪 High-Protein badge — keep the sub, add \"High Protein • Loaded with Veggies\", no bread claim.\n\nWhich one?",
+          "options": ["🥖 Swap to GF base", "🥗 Veggie Delite", "💪 High-Protein"]
+        }
+      ],
+      "await": {
+        "kind": "buttons",
+        "options": [
+          { "match": "Swap to GF base", "next": "gf_swapped" },
+          { "match": "Veggie Delite", "next": "gf_swapped" },
+          { "match": "High-Protein", "next": "gf_swapped" }
+        ],
+        "reask": [
+          {
+            "type": "buttons",
+            "body": "Tap one of the accurate options — Swap to GF base, Veggie Delite, or High-Protein.",
+            "options": ["🥖 Swap to GF base", "🥗 Veggie Delite", "💪 High-Protein"]
+          }
+        ]
+      }
+    },
+
+    "gf_swapped": {
+      "onEnter": [
+        {
+          "type": "text",
+          "text": "On it ✅ Sub rebuilt on the gluten-free base — heads up though, the cookie in this combo still has gluten, so I can't tag the whole combo gluten-free. Tag now reads \"SUB MADE ON GLUTEN-FREE BREAD\" — accurate, and still speaks to the same crowd."
+        },
+        {
+          "type": "image",
+          "link": "https://s7ap1.scene7.com/is/image/varunAEM/Subway-v4?cache=off",
+          "caption": "Updated with the gluten-free base 🥖"
+        }
+      ],
+      "await": { "kind": "any", "next": "final_hook" }
+    },
+
+    "final_hook": {
+      "onEnter": [
+        {
+          "type": "text",
+          "text": "🔥 Ek strip add kar diya: \"First 20 guests: EXTRA 10% OFF — show this on WhatsApp,\" neeche compliant fine print ke saath — \"Finals Week only • dine-in & takeaway • first 20 guests only.\""
+        },
+        {
+          "type": "image",
+          "link": "https://s7ap1.scene7.com/is/image/varunAEM/Subway-v5?cache=off",
+          "caption": "Final banner ready! 🎉"
+        },
+        {
+          "type": "buttons",
+          "body": "Banner ready hai! Kahan bhejna hai?\n📲 WhatsApp — tumhari opted-in lists (Office 400 · College 400), Subway ke official number se\n📸 Instagram — @SubwayHinjewadi pe post + ek \"Finals Week\" Story, countdown ke saath\n🔀 Dono",
+          "options": ["📲 WhatsApp", "📸 Instagram", "🔀 Dono"]
+        }
+      ],
+      "await": {
+        "kind": "buttons",
+        "options": [
+          { "match": "WhatsApp", "next": "sent" },
+          { "match": "Instagram", "next": "sent" },
+          { "match": "Dono", "next": "sent" }
+        ],
+        "reask": [
+          {
+            "type": "buttons",
+            "body": "Kahan bhejun? Tap karein — WhatsApp, Instagram, ya Dono.",
+            "options": ["📲 WhatsApp", "📸 Instagram", "🔀 Dono"]
+          }
+        ]
+      }
+    },
+
+    "sent": {
+      "onEnter": [
+        {
+          "type": "text",
+          "text": "Ho gaya ✅ Gluten-free sub, match-day price, aur extra-20 wala hook — sab ek banner mein, kickoff ke liye ready. 🏏"
+        }
+      ]
+    }
+  }
+}
