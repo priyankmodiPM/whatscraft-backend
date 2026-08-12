@@ -1,0 +1,128 @@
+{
+  "_comment": "Kia 'Seltos follow-up' scripted demo flow (see Automotive note). Gated to KIA_PHONE. Swap the placeholder cdn.whatscraft.local banner URLs for your hosted images, and the contact display number if needed. Copy/steps are data-only. Engine: src/scriptedFlow.js.",
+  "phone": "919899860983",
+  "start": "kickoff",
+  "steps": {
+    "kickoff": {
+      "onEnter": [
+        {
+          "type": "buttons",
+          "body": "Hi Rahul 👋 Mr. Sharma came in for a Seltos test drive 4 days back and hasn't heard back since. Want to follow up with him?",
+          "options": ["✅ Yes, follow up", "🙅 Not now"]
+        }
+      ],
+      "await": {
+        "kind": "buttons",
+        "options": [
+          { "match": "Yes follow up", "next": "profile" },
+          { "match": "Not now", "next": "not_now" }
+        ],
+        "reask": [
+          {
+            "type": "buttons",
+            "body": "Shall I follow up with Mr. Sharma?",
+            "options": ["✅ Yes, follow up", "🙅 Not now"]
+          }
+        ]
+      }
+    },
+
+    "not_now": {
+      "onEnter": [
+        { "type": "text", "text": "No problem — I'll keep the lead warm and remind you later. 👍" }
+      ]
+    },
+
+    "profile": {
+      "onEnter": [
+        {
+          "type": "buttons",
+          "body": "Got it — I've pulled up Mr. Sharma's profile: test-drive on the HTK, an exchange car on file, and he'd asked about a combined car + insurance offer. Want me to put together a banner for what he's looking for?",
+          "options": ["✅ Yes, go ahead", "🙅 No"]
+        }
+      ],
+      "await": {
+        "kind": "buttons",
+        "options": [
+          { "match": "Yes go ahead", "next": "ask_contact" },
+          { "match": "No", "next": "no_banner" }
+        ],
+        "reask": [
+          {
+            "type": "buttons",
+            "body": "Shall I build the Seltos HTK + Insurance combo banner?",
+            "options": ["✅ Yes, go ahead", "🙅 No"]
+          }
+        ]
+      }
+    },
+
+    "no_banner": {
+      "onEnter": [
+        { "type": "text", "text": "No problem — ping me whenever you're ready and I'll build it. 👍" }
+      ]
+    },
+
+    "ask_contact": {
+      "onEnter": [
+        {
+          "type": "buttons",
+          "body": "On it — a Seltos HTK + Insurance combo, festive pricing, exchange-offer note included. Before I render it — want me to add your name & number so Mr. Sharma can reach you directly?",
+          "options": ["✅ Yes, add it", "🙅 No, skip"]
+        }
+      ],
+      "await": {
+        "kind": "buttons",
+        "options": [
+          { "match": "Yes add it", "next": "render_with_contact" },
+          { "match": "No skip", "next": "render_no_contact" }
+        ],
+        "reask": [
+          {
+            "type": "buttons",
+            "body": "Add your name & number to the banner?",
+            "options": ["✅ Yes, add it", "🙅 No, skip"]
+          }
+        ]
+      }
+    },
+
+    "render_with_contact": {
+      "onEnter": [
+        { "type": "text", "text": "Adding your contact — Rahul · +91 98998 60983 ✅ Rendering now… ⏳" },
+        {
+          "type": "image",
+          "link": "https://s7ap1.scene7.com/is/image/varunAEM/Kia-v1?cache=off",
+          "caption": "Here's the preview — how's this looking?"
+        }
+      ],
+      "await": { "kind": "any", "next": "localize" }
+    },
+
+    "render_no_contact": {
+      "onEnter": [
+        { "type": "text", "text": "No problem — leaving your contact off. Rendering now… ⏳" },
+        {
+          "type": "image",
+          "link": "https://s7ap1.scene7.com/is/image/varunAEM/Kia-v1?cache=off",
+          "caption": "Here's the preview — how's this looking?"
+        }
+      ],
+      "await": { "kind": "any", "next": "localize" }
+    },
+
+    "localize": {
+      "onEnter": [
+        {
+          "type": "text",
+          "text": "Done ✅ Same banner — headline / offer / CTA now in Hindi, layout, Kia branding and combo details unchanged. Final on-road price added."
+        },
+        {
+          "type": "image",
+          "link": "https://s7ap1.scene7.com/is/image/varunAEM/Kia-v2?cache=off",
+          "caption": "Ready to send to Mr. Sharma 🎉"
+        }
+      ]
+    }
+  }
+}
