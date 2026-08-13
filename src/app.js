@@ -163,6 +163,12 @@ function sleep(ms) {
 // follow-up edit-menu buttons don't arrive first.
 const IMAGE_DELIVERY_DELAY_MS = Number(process.env.IMAGE_DELIVERY_DELAY_MS ?? 1800);
 
+// Pause after each scripted "progress" line (e.g. "🎨 Laying out the design…") so a
+// banner reveal feels like real generation rather than an instant drop. Per-message
+// `delayAfterMs` in the flow JSON overrides this default. Tune live via env, e.g.
+// GEN_STEP_DELAY_MS=3500 for a slower, more visible build on stage.
+const GEN_STEP_DELAY_MS = Number(process.env.GEN_STEP_DELAY_MS ?? 2800);
+
 async function sendEditOptions(to, result) {
   const { bodyText, options, buttonText } = result;
   if (options.length === 0) {
@@ -197,6 +203,11 @@ async function runScriptedSends(phoneNumber, sends) {
     if (msg.type === 'text') {
       await sendText(phoneNumber, msg.text);
       appendHistory(phoneNumber, 'assistant', msg.text);
+    } else if (msg.type === 'progress') {
+      // Streamed "working…" line, then a beat before the next message so the reveal
+      // feels generated. Not stored in history (it's transient UX, not conversation).
+      await sendText(phoneNumber, msg.text);
+      await sleep(msg.delayAfterMs ?? GEN_STEP_DELAY_MS);
     } else if (msg.type === 'image') {
       await sendImage(phoneNumber, msg.link, msg.caption);
       if (msg.caption) appendHistory(phoneNumber, 'assistant', msg.caption);
