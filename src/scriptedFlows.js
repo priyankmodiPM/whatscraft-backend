@@ -1,10 +1,15 @@
 // ── Scripted-flow registry ────────────────────────────────────────────────────
-// Loads the data-defined scripted demo flows (Subway, Kia) and exposes a lookup by
-// the BUSINESS WhatsApp number the customer texted — i.e. `value.metadata.display_phone_number`
-// from the webhook, not the customer's own number (`message.from`). Each flow is gated
-// to its own dedicated business number and runs the fixed script (src/scriptedFlow.js),
-// never reaching the LLM; a message to any other business number falls through to the
-// existing behaviour.
+// Loads the data-defined scripted demo flows (Subway, Kia) and exposes a lookup that
+// runs the fixed script (src/scriptedFlow.js), never reaching the LLM; anything that
+// matches neither flow falls through to the existing behaviour.
+//
+// Routing prefers the BUSINESS number the customer texted (`value.metadata.display_phone_number`
+// from the webhook) — that's the only correct signal for a flow with its OWN dedicated
+// WhatsApp account (currently Kia, see senderEnvPrefix below), since any customer can
+// text that number. But a flow with no dedicated account of its own (currently Subway —
+// it sends from the shared default account) has no business number to key on, so it
+// falls back to matching the SENDER's number (`message.from`) instead — see
+// flowForMessage(). Don't assume every flow can be matched the same way.
 //
 // The number → flow binding is configurable, single source of truth = data/flow-routing.json
 // (e.g. { "subway": "9899860983", "kia": "919899860983" }). Precedence per flow:
@@ -85,18 +90,27 @@ function loadScriptedFlows() {
   return byPhone;
 }
 
-// Resolve the scripted flow for a business number (the number a message was sent TO),
-// or null. Substring match tolerates +/country-code/formatting variance. When two
-// registered numbers overlap (e.g. 9899860983 is a substring of the Kia 919899860983),
-// the MOST SPECIFIC — longest — registered number wins, so the full number routes to
-// its own flow rather than the shorter one that it contains.
-function flowForPhone(byPhone, businessNumber) {
-  const to = String(businessNumber);
+// Resolve the scripted flow for a single number (either the business number a message
+// was sent to, or the sender's own number), or null. Substring match tolerates
+// +/country-code/formatting variance. When two registered numbers overlap (e.g.
+// 9899860983 is a substring of the Kia 919899860983), the MOST SPECIFIC — longest —
+// registered number wins, so the full number routes to its own flow rather than the
+// shorter one that it contains.
+function flowForPhone(byPhone, number) {
+  const target = String(number);
   const byLongestFirst = [...byPhone.entries()].sort((a, b) => b[0].length - a[0].length);
   for (const [num, flow] of byLongestFirst) {
-    if (to.includes(num)) return flow;
+    if (target.includes(num)) return flow;
   }
   return null;
 }
 
-module.exports = { loadScriptedFlows, flowForPhone };
+// Resolve the scripted flow for an inbound message. Tries the business number first
+// (correct for flows with their own dedicated WhatsApp account, e.g. Kia), then falls
+// back to the sender's number (needed for flows like Subway that share the default
+// account and have no business number of their own to key on).
+function flowForMessage(byPhone, { businessNumber, senderNumber } = {}) {
+  return flowForPhone(byPhone, businessNumber) || flowForPhone(byPhone, senderNumber);
+}
+
+module.exports = { loadScriptedFlows, flowForPhone, flowForMessage };
