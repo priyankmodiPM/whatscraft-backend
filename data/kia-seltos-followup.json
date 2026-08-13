@@ -1,5 +1,5 @@
 {
-  "_comment": "Kia 'Seltos follow-up' scripted demo flow (see Automotive note). Gated to KIA_PHONE. Copy is short/informal for WhatsApp. 'progress' messages stream a beat apart (GEN_STEP_DELAY_MS, ~1.6s) to make a banner reveal feel generated. Swap the Scene7 banner URLs / contact number as needed. Engine: src/scriptedFlow.js.",
+  "_comment": "Kia 'Seltos follow-up' scripted demo flow (see Automotive note). Gated to KIA_PHONE. Short/informal WhatsApp copy; 'progress' messages stream a beat apart (GEN_STEP_DELAY_MS, ~2.8s) so a banner reveal feels generated. Flow: nudge -> profile -> add contact -> render preview -> localize to Hindi + on-road price. Swap the Scene7 banner URLs / contact number as needed. Engine: src/scriptedFlow.js.",
   "phone": "919899860983",
   "start": "kickoff",
   "steps": {
@@ -18,11 +18,7 @@
           { "match": "Not now", "next": "not_now" }
         ],
         "reask": [
-          {
-            "type": "buttons",
-            "body": "Shall I nudge Apoorva?",
-            "options": ["✅ Yes, follow up", "🙅 Not now"]
-          }
+          { "type": "buttons", "body": "Shall I nudge Apoorva?", "options": ["✅ Yes, follow up", "🙅 Not now"] }
         ]
       }
     },
@@ -44,15 +40,11 @@
       "await": {
         "kind": "buttons",
         "options": [
-          { "match": "Yes go ahead", "next": "offer" },
+          { "match": "Yes go ahead", "next": "ask_contact" },
           { "match": "No", "next": "no_banner" }
         ],
         "reask": [
-          {
-            "type": "buttons",
-            "body": "Shall I build the banner?",
-            "options": ["✅ Yes, go ahead", "🙅 No"]
-          }
+          { "type": "buttons", "body": "Shall I build the banner?", "options": ["✅ Yes, go ahead", "🙅 No"] }
         ]
       }
     },
@@ -63,36 +55,11 @@
       ]
     },
 
-    "offer": {
-      "onEnter": [
-        {
-          "type": "buttons",
-          "body": "Which insurance offer should I feature? 🛡️\nPick what Apoorva's most likely to go for:",
-          "options": ["🛡️ Zero Dep Cover", "🔧 Engine + RSA", "📅 3-Yr Comprehensive"]
-        }
-      ],
-      "await": {
-        "kind": "buttons",
-        "options": [
-          { "match": "Zero Dep Cover", "next": "ask_contact" },
-          { "match": "Engine + RSA", "next": "ask_contact" },
-          { "match": "3-Yr Comprehensive", "next": "ask_contact" }
-        ],
-        "reask": [
-          {
-            "type": "buttons",
-            "body": "Tap an insurance offer to feature:",
-            "options": ["🛡️ Zero Dep Cover", "🔧 Engine + RSA", "📅 3-Yr Comprehensive"]
-          }
-        ]
-      }
-    },
-
     "ask_contact": {
       "onEnter": [
         {
           "type": "buttons",
-          "body": "Nice pick 👍\nBuilding the Seltos HTK + insurance combo now 🎯\nFestive pricing + exchange note, all in.\n\nAdd your name & number so she can reach you?",
+          "body": "On it — building the Seltos HTK + insurance combo 🎯\nFestive pricing + exchange note, all in.\n\nAdd your name & number so she can reach you?",
           "options": ["✅ Yes, add it", "🙅 No, skip"]
         }
       ],
@@ -103,11 +70,7 @@
           { "match": "No skip", "next": "render_no_contact" }
         ],
         "reask": [
-          {
-            "type": "buttons",
-            "body": "Add your name & number to the banner?",
-            "options": ["✅ Yes, add it", "🙅 No, skip"]
-          }
+          { "type": "buttons", "body": "Add your name & number to the banner?", "options": ["✅ Yes, add it", "🙅 No, skip"] }
         ]
       }
     },
