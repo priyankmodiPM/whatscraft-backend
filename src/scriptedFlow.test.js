@@ -156,38 +156,56 @@ test('Subway gluten-free step re-asks on an unrecognised reply', () => {
   assert.ok(sends.some((m) => m.type === 'buttons'), 're-asks with buttons');
 });
 
-test('Kia golden path runs kickoff → localized banner with contact', () => {
+test('Kia golden path: pick offer → exchange → contact → anything-else → 2 banners', () => {
   const flow = flowForPhone(loadScriptedFlows(), '919899860983');
   const { session, emitted } = walk(flow, [
     '✅ Yes, follow up',
-    '✅ Yes, go ahead',
-    '✅ Yes, add it',
-    'make it Hindi and add the on-road price',
+    'OFFER_INSURANCE',                                  // tap a carousel card
+    '✅ Yes, add it',                                   // add exchange bonus
+    '✅ Yes, add it',                                   // add contact
+    'She wanted the 3-Yr Comprehensive insurance plan', // anything else (free text)
+    'make it Hindi and add the on-road price',          // localize
   ]);
   assert.strictEqual(session, null);
   const texts = emitted.filter((m) => m.type === 'text').map((m) => m.text).join('\n');
   assert.ok(/\+91 98998 60983/.test(texts), 'confirms adding the known contact number');
   const images = emitted.filter((m) => m.type === 'image').map((m) => m.link);
-  assert.strictEqual(images.length, 2, 'contact preview + final Hindi banner');
+  assert.strictEqual(images.length, 2, 'preview + final Hindi banner (offers are a carousel)');
+  assert.ok(emitted.some((m) => m.type === 'carousel'), 'offers shown as a carousel');
   assert.ok(emitted.some((m) => m.type === 'progress'), 'streams generation progress');
 });
 
-test('Kia "Not now" and "No" are clean exits', () => {
+test('Kia offer carousel has 3 cards with the expected payloads', () => {
   const flow = flowForPhone(loadScriptedFlows(), '919899860983');
-  assert.strictEqual(walk(flow, ['🙅 Not now']).session, null);
-  assert.strictEqual(walk(flow, ['✅ Yes, follow up', '🙅 No']).session, null);
+  let { session, sends } = scriptedFlow.start(flow);
+  ({ session, sends } = scriptedFlow.advance(flow, session, '✅ Yes, follow up'));
+  const carousel = sends.find((m) => m.type === 'carousel');
+  assert.ok(carousel, 'a carousel message is sent');
+  assert.strictEqual(carousel.cards.length, 3, 'three offer cards');
+  assert.deepStrictEqual(
+    carousel.cards.map((c) => c.payload),
+    ['OFFER_INSURANCE', 'OFFER_LOWEMI', 'OFFER_ZERODOWN']
+  );
+  assert.ok(carousel.cards.every((c) => /^https?:\/\//.test(c.imageLink)), 'each card has an image');
 });
 
-test('Kia "No, skip" still reaches the localized banner (no contact line)', () => {
+test('Kia "Not now" is a clean exit', () => {
+  const flow = flowForPhone(loadScriptedFlows(), '919899860983');
+  assert.strictEqual(walk(flow, ['🙅 Not now']).session, null);
+});
+
+test('Kia "No, skip" contact still reaches the final banner (no contact line)', () => {
   const flow = flowForPhone(loadScriptedFlows(), '919899860983');
   const { session, emitted } = walk(flow, [
     '✅ Yes, follow up',
-    '✅ Yes, go ahead',
-    '🙅 No, skip',
+    'OFFER_LOWEMI',
+    '✅ Yes, add it',   // exchange
+    '🙅 No, skip',       // contact skipped
+    'nothing else',
     'Hindi + on-road price',
   ]);
   assert.strictEqual(session, null);
   const texts = emitted.filter((m) => m.type === 'text').map((m) => m.text).join('\n');
   assert.ok(/no contact on this one/.test(texts));
-  assert.ok(!/Adding your contact/.test(texts));
+  assert.ok(!/\+91 98998 60983/.test(texts), 'contact number not added when skipped');
 });
