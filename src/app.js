@@ -39,9 +39,10 @@ const conversationHistory = new Map();
 const flow2Sessions = new Map();
 
 // Scripted demo flows (Subway "Finals Week", Kia "Seltos follow-up") — each gated to
-// its own hardcoded demo number (see scriptedFlows.js). While a scripted phone has an
-// active session, inbound messages are driven entirely by the data-defined script
-// (scriptedFlow.js) and the LLM is bypassed. A fresh message from a scripted phone
+// its own hardcoded demo BUSINESS number, i.e. which WhatsApp account the customer
+// texted (see scriptedFlows.js), not the customer's own number. While a scripted
+// phone has an active session, inbound messages are driven entirely by the
+// data-defined script (scriptedFlow.js) and the LLM is bypassed. A fresh message
 // with no session starts the flow from its kickoff step.
 const scriptedFlows = loadScriptedFlows();
 const scriptedSessions = new Map();
@@ -528,6 +529,13 @@ app.post('/', async (req, res) => {
     const messages = value?.messages;
     if (!messages?.length) return;
 
+    // The WhatsApp Business number the customer TEXTED — i.e. which demo account
+    // received the message. This is what selects a scripted flow, not who sent it:
+    // Subway and Kia each own a distinct business number, so a customer texting
+    // Kia's number always gets the Kia script regardless of the customer's own
+    // phone. Digits-only to tolerate any +/dash formatting on display_phone_number.
+    const businessNumber = String(value?.metadata?.display_phone_number || '').replace(/\D/g, '');
+
     for (const message of messages) {
       if (message.context) console.log('[webhook] message.context:', JSON.stringify(message.context));
       if (message.referral) console.log('[webhook] message.referral:', JSON.stringify(message.referral));
@@ -538,14 +546,16 @@ app.post('/', async (req, res) => {
       if (!userText) continue;
 
       const phoneNumber = message.from;
-      console.log(`Message from ${phoneNumber}: ${userText}`);
+      console.log(`Message from ${phoneNumber} to business number ${businessNumber}: ${userText}`);
 
       appendHistory(phoneNumber, 'user', userText);
 
       // Scripted demo phones (Subway, Kia) run their fixed script end-to-end and
       // never touch the LLM: no session ⇒ kickoff, session present ⇒ advance. Checked
-      // first so these numbers are always fully deterministic.
-      const scripted = flowForPhone(scriptedFlows, phoneNumber);
+      // first so these numbers are always fully deterministic. Routed by the business
+      // number the message was SENT TO, not the customer's own number — replies still
+      // go back to `phoneNumber` (the customer), see runScriptedSends.
+      const scripted = flowForPhone(scriptedFlows, businessNumber);
       if (scripted) {
         await handleScriptedTurn(phoneNumber, scripted, userText);
         continue;
