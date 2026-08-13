@@ -51,12 +51,16 @@ echo
 send "hi"
 sleep "$PAUSE"
 
-# 1) Follow up → WC pulls Mr. Sharma's profile, offers to build the banner [Yes, go ahead / No]
+# 1) Follow up → WC pulls Apoorva's profile, offers to build the banner [Yes, go ahead / No]
 tap "✅ Yes, follow up"
 sleep "$PAUSE"
 
-# 2) Build it → WC asks whether to add the salesman's contact (no preview yet) [Yes, add it / No, skip]
+# 2) Build it → WC asks which insurance offer to feature [3 options]
 tap "✅ Yes, go ahead"
+sleep "$PAUSE"
+
+# 3) Pick the insurance offer → WC asks whether to add the salesman's contact (no preview yet)
+tap "🛡️ Zero Dep Cover"
 sleep "$PAUSE"
 
 # 3) Add contact → WC confirms the known number and renders the preview (v1 with contact)
@@ -64,6 +68,6 @@ tap "✅ Yes, add it"
 sleep "$PAUSE"
 
 # 4) Localize (free text) → WC re-renders in Hindi with the final on-road price (final)
-send "One more — Mr. Sharma prefers Hindi. Generate it in Hindi, and add the final on-road price."
+send "One more — Apoorva prefers Hindi. Generate it in Hindi, and add the final on-road price."
 
 echo "=== done — verify the contact preview + final Hindi/on-road banner in the server logs ==="
