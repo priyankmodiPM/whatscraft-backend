@@ -457,6 +457,13 @@ Examples of the tone/style to match:
   return response.choices[0].message.content;
 }
 
+// ── Health check ──────────────────────────────────────────────────────────────
+// Pinged by .github/workflows/keep-alive.yml to stop the Render free-tier
+// instance from spinning down after 15 min of inactivity.
+app.get('/health', (req, res) => {
+  res.status(200).send('ok');
+});
+
 // ── Webhook routes ───────────────────────────────────────────────────────────
 
 app.get('/', (req, res) => {
