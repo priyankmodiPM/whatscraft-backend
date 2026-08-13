@@ -15,7 +15,7 @@ const {
 const { parseEditOptionId, messageTextForInteractiveReply } = require('./interactiveReply');
 const flow2Session = require('./flow2Session');
 const scriptedFlow = require('./scriptedFlow');
-const { loadScriptedFlows, flowForPhone } = require('./scriptedFlows');
+const { loadScriptedFlows, flowForMessage } = require('./scriptedFlows');
 
 const app = express();
 app.use(express.json());
@@ -552,10 +552,12 @@ app.post('/', async (req, res) => {
 
       // Scripted demo phones (Subway, Kia) run their fixed script end-to-end and
       // never touch the LLM: no session ⇒ kickoff, session present ⇒ advance. Checked
-      // first so these numbers are always fully deterministic. Routed by the business
-      // number the message was SENT TO, not the customer's own number — replies still
-      // go back to `phoneNumber` (the customer), see runScriptedSends.
-      const scripted = flowForPhone(scriptedFlows, businessNumber);
+      // first so these numbers are always fully deterministic. Prefers the business
+      // number the message was sent to (correct for Kia, which has its own dedicated
+      // account) and falls back to the sender's number (needed for Subway, which has
+      // no dedicated account of its own — see flowForMessage). Replies always go back
+      // to `phoneNumber` (the customer) regardless of which matched — see runScriptedSends.
+      const scripted = flowForMessage(scriptedFlows, { businessNumber, senderNumber: phoneNumber });
       if (scripted) {
         await handleScriptedTurn(phoneNumber, scripted, userText);
         continue;
