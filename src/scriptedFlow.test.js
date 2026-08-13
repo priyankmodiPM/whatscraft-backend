@@ -144,6 +144,7 @@ test('Kia golden path runs kickoff → localized banner with contact', () => {
   const { session, emitted } = walk(flow, [
     '✅ Yes, follow up',
     '✅ Yes, go ahead',
+    '🛡️ Zero Dep Cover',
     '✅ Yes, add it',
     'make it Hindi and add the on-road price',
   ]);
@@ -152,6 +153,8 @@ test('Kia golden path runs kickoff → localized banner with contact', () => {
   assert.ok(/\+91 98998 60983/.test(texts), 'confirms adding the known contact number');
   const images = emitted.filter((m) => m.type === 'image').map((m) => m.link);
   assert.strictEqual(images.length, 2, 'contact preview + final Hindi banner');
+  // Progress lines stream before each banner reveal.
+  assert.ok(emitted.some((m) => m.type === 'progress'), 'streams generation progress');
 });
 
 test('Kia "Not now" and "No" are clean exits', () => {
@@ -165,11 +168,12 @@ test('Kia "No, skip" still reaches the localized banner (no contact line)', () =
   const { session, emitted } = walk(flow, [
     '✅ Yes, follow up',
     '✅ Yes, go ahead',
+    '🛡️ Zero Dep Cover',
     '🙅 No, skip',
     'Hindi + on-road price',
   ]);
   assert.strictEqual(session, null);
   const texts = emitted.filter((m) => m.type === 'text').map((m) => m.text).join('\n');
-  assert.ok(/leaving your contact off/.test(texts));
+  assert.ok(/no contact on this one/.test(texts));
   assert.ok(!/Adding your contact/.test(texts));
 });
