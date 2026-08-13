@@ -17,7 +17,7 @@ set -euo pipefail
 
 BASE_URL="${BASE_URL:-http://localhost:3000}"
 PHONE="${PHONE:-${KIA_PHONE:-919899860983}}"
-PAUSE="${PAUSE:-3}"
+PAUSE="${PAUSE:-10}"
 
 # Send a free-text WhatsApp message.
 send() {
@@ -43,6 +43,18 @@ JSON
   echo
 }
 
+# Tap a carousel-template card's quick-reply button. Arg = payload (e.g. OFFER_INSURANCE).
+tap_card() {
+  echo ">>> [tap carousel card] $1"
+  curl -s -X POST "$BASE_URL/" -H 'Content-Type: application/json' -d "$(cat <<JSON
+{"object":"whatsapp_business_account","entry":[{"changes":[{"value":{"messages":[
+{"from":"$PHONE","type":"button","button":{"payload":"$1","text":"Select"}}]}}]}]}
+JSON
+)" >/dev/null
+  echo "    (200 ack — check server logs)"
+  echo
+}
+
 echo "=== Kia 'Seltos follow-up' flow → $BASE_URL  (sender: $PHONE) ==="
 echo "    (server must be running with KIA_PHONE=$PHONE)"
 echo
@@ -51,19 +63,27 @@ echo
 send "hi"
 sleep "$PAUSE"
 
-# 1) Follow up → WC pulls Apoorva's profile, offers to build the banner [Yes, go ahead / No]
+# 1) Follow up → WC pulls Apoorva's profile and shows 3 offer banners [pick one]
 tap "✅ Yes, follow up"
 sleep "$PAUSE"
 
-# 2) Build it → WC asks whether to add the salesman's contact
-tap "✅ Yes, go ahead"
+# 2) Pick an offer from the carousel → WC proactively offers to add the exchange bonus
+tap_card "OFFER_INSURANCE"
 sleep "$PAUSE"
 
-# 3) Add contact → WC confirms the known number and renders the preview (streamed progress)
+# 3) Add exchange bonus → WC asks whether to add the salesman's contact
 tap "✅ Yes, add it"
 sleep "$PAUSE"
 
-# 4) Localize (free text) → WC re-renders in Hindi with the final on-road price (final)
+# 4) Add contact → WC asks "anything else?"
+tap "✅ Yes, add it"
+sleep "$PAUSE"
+
+# 5) Anything else (free text) → WC generates the first banner (streamed progress → preview)
+send "She wanted the 3-Yr Comprehensive insurance plan"
+sleep "$PAUSE"
+
+# 6) Localize (free text) → WC re-renders in Hindi with the final on-road price (final)
 send "One more — Apoorva prefers Hindi. Generate it in Hindi, and add the final on-road price."
 
-echo "=== done — verify the preview + final Hindi/on-road banner in the server logs ==="
+echo "=== done — verify the 3 offers, preview + final Hindi/on-road banner in the server logs ==="

@@ -198,6 +198,39 @@ function sendQuickReplies(to, question, options, sender) {
   return sendButtons(to, question, buttons, sender);
 }
 
+// Send a WhatsApp CAROUSEL TEMPLATE — the only native swipeable multi-card message.
+// The template itself (bubble text, per-card layout, button labels) must be created &
+// approved in Meta beforehand; here we only pass the per-card runtime parameters:
+//   - header image (public link, e.g. the Scene7 URL)
+//   - body variable {{1}} (the offer text)
+//   - the quick-reply button's payload (used to identify which offer was tapped —
+//     it flows back on the webhook as message.button.payload)
+// `bodyParams` fills any variables in the template's top "bubble" body (optional).
+function sendCarouselTemplate(to, { template, language = 'en_US', bodyParams = [], cards = [] }, sender) {
+  const carouselCards = cards.map((card, i) => ({
+    card_index: i,
+    components: [
+      { type: 'header', parameters: [{ type: 'image', image: { link: card.imageLink } }] },
+      { type: 'body', parameters: [{ type: 'text', text: card.bodyText }] },
+      { type: 'button', sub_type: 'quick_reply', index: 0, parameters: [{ type: 'payload', payload: card.payload }] },
+    ],
+  }));
+  const components = [];
+  if (bodyParams.length) {
+    components.push({ type: 'body', parameters: bodyParams.map((text) => ({ type: 'text', text })) });
+  }
+  components.push({ type: 'carousel', cards: carouselCards });
+  return whatsappPost(
+    {
+      messaging_product: 'whatsapp',
+      to,
+      type: 'template',
+      template: { name: template, language: { code: language }, components },
+    },
+    sender
+  );
+}
+
 // ── Scripted-flow executor ────────────────────────────────────────────────────
 
 // Deliver the messages a scripted step returns. The engine (scriptedFlow.js) stays
@@ -217,6 +250,10 @@ async function runScriptedSends(phoneNumber, sends, sender) {
     } else if (msg.type === 'image') {
       await sendImage(phoneNumber, msg.link, msg.caption, sender);
       if (msg.caption) appendHistory(phoneNumber, 'assistant', msg.caption);
+      await sleep(IMAGE_DELIVERY_DELAY_MS);
+    } else if (msg.type === 'carousel') {
+      await sendCarouselTemplate(phoneNumber, msg, sender);
+      appendHistory(phoneNumber, 'assistant', `[sent ${msg.cards?.length ?? 0}-card offer carousel]`);
       await sleep(IMAGE_DELIVERY_DELAY_MS);
     } else if (msg.type === 'buttons') {
       await sendQuickReplies(phoneNumber, msg.body, msg.options, sender);
@@ -534,7 +571,14 @@ app.post('/', async (req, res) => {
       if (message.image) console.log('[webhook] message.image:', JSON.stringify(message.image));
 
       const interactiveReply = message?.interactive?.button_reply || message?.interactive?.list_reply;
-      const userText = message?.text?.body || (interactiveReply && messageTextForInteractiveReply(interactiveReply));
+      // Carousel/template quick-reply buttons arrive as message.button (payload + text),
+      // a different shape from free-form interactive replies. Use the payload so the
+      // scripted gate can match the tapped card (e.g. "OFFER_INSURANCE").
+      const templateButtonReply = message?.button?.payload || message?.button?.text;
+      const userText =
+        message?.text?.body ||
+        (interactiveReply && messageTextForInteractiveReply(interactiveReply)) ||
+        templateButtonReply;
       if (!userText) continue;
 
       const phoneNumber = message.from;
