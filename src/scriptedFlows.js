@@ -1,8 +1,10 @@
 // ── Scripted-flow registry ────────────────────────────────────────────────────
 // Loads the data-defined scripted demo flows (Subway, Kia) and exposes a lookup by
-// the sender's WhatsApp number. Each flow is gated to a single demo phone that runs
-// the fixed script (src/scriptedFlow.js) and never reaches the LLM; any other number
-// falls through to the existing behaviour.
+// the BUSINESS WhatsApp number the customer texted — i.e. `value.metadata.display_phone_number`
+// from the webhook, not the customer's own number (`message.from`). Each flow is gated
+// to its own dedicated business number and runs the fixed script (src/scriptedFlow.js),
+// never reaching the LLM; a message to any other business number falls through to the
+// existing behaviour.
 //
 // The number → flow binding is configurable, single source of truth = data/flow-routing.json
 // (e.g. { "subway": "9899860983", "kia": "919899860983" }). Precedence per flow:
@@ -83,16 +85,16 @@ function loadScriptedFlows() {
   return byPhone;
 }
 
-// Resolve the scripted flow for an inbound sender, or null. Substring match (like the
-// existing Flow-2 gate) tolerates the +/country-code/formatting variance in `from`.
-// When two registered numbers overlap (e.g. 9899860983 is a substring of the Kia
-// 919899860983), the MOST SPECIFIC — longest — registered number wins, so the full
-// number routes to its own flow rather than the shorter one that it contains.
-function flowForPhone(byPhone, phoneNumber) {
-  const from = String(phoneNumber);
+// Resolve the scripted flow for a business number (the number a message was sent TO),
+// or null. Substring match tolerates +/country-code/formatting variance. When two
+// registered numbers overlap (e.g. 9899860983 is a substring of the Kia 919899860983),
+// the MOST SPECIFIC — longest — registered number wins, so the full number routes to
+// its own flow rather than the shorter one that it contains.
+function flowForPhone(byPhone, businessNumber) {
+  const to = String(businessNumber);
   const byLongestFirst = [...byPhone.entries()].sort((a, b) => b[0].length - a[0].length);
   for (const [num, flow] of byLongestFirst) {
-    if (from.includes(num)) return flow;
+    if (to.includes(num)) return flow;
   }
   return null;
 }
