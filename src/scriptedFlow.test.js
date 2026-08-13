@@ -74,6 +74,23 @@ test('loadScriptedFlows resolves the two flows on distinct numbers', () => {
   assert.strictEqual(flowForPhone(flows, '911112223334'), null);
 });
 
+test('Kia sends from its own WhatsApp account when configured; Subway uses the default', () => {
+  process.env.KIA_WHATSAPP_PHONE_NUMBER_ID = '111222';
+  process.env.KIA_WHATSAPP_TOKEN = 'faketok';
+  try {
+    const flows = loadScriptedFlows();
+    assert.deepStrictEqual(flowForPhone(flows, '919899860983').__sender, {
+      phoneNumberId: '111222',
+      token: 'faketok',
+      label: 'kia',
+    });
+    assert.strictEqual(flowForPhone(flows, '918328145692').__sender, null, 'subway uses the default account');
+  } finally {
+    delete process.env.KIA_WHATSAPP_PHONE_NUMBER_ID;
+    delete process.env.KIA_WHATSAPP_TOKEN;
+  }
+});
+
 test('flowForPhone prefers the longest (most-specific) registered number', () => {
   // If a 10-digit number is ever registered alongside its 12-digit +91 form, the full
   // number must route to its own flow rather than the shorter one it contains.
@@ -144,7 +161,6 @@ test('Kia golden path runs kickoff → localized banner with contact', () => {
   const { session, emitted } = walk(flow, [
     '✅ Yes, follow up',
     '✅ Yes, go ahead',
-    '🛡️ Zero Dep Cover',
     '✅ Yes, add it',
     'make it Hindi and add the on-road price',
   ]);
@@ -153,7 +169,6 @@ test('Kia golden path runs kickoff → localized banner with contact', () => {
   assert.ok(/\+91 98998 60983/.test(texts), 'confirms adding the known contact number');
   const images = emitted.filter((m) => m.type === 'image').map((m) => m.link);
   assert.strictEqual(images.length, 2, 'contact preview + final Hindi banner');
-  // Progress lines stream before each banner reveal.
   assert.ok(emitted.some((m) => m.type === 'progress'), 'streams generation progress');
 });
 
@@ -168,7 +183,6 @@ test('Kia "No, skip" still reaches the localized banner (no contact line)', () =
   const { session, emitted } = walk(flow, [
     '✅ Yes, follow up',
     '✅ Yes, go ahead',
-    '🛡️ Zero Dep Cover',
     '🙅 No, skip',
     'Hindi + on-road price',
   ]);

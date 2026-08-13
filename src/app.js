@@ -70,13 +70,19 @@ function appendHistory(phoneNumber, role, content) {
 
 // ── WhatsApp helpers ─────────────────────────────────────────────────────────
 
-async function whatsappPost(body) {
-  const url = `https://graph.facebook.com/v19.0/${whatsappPhoneNumberId}/messages`;
-  // A short label so each outbound is traceable in the logs (type + recipient).
-  const label = `${body.type}${body.interactive ? `/${body.interactive.type}` : ''} → ${body.to}`;
+// The default WhatsApp Business sender (the existing account). Flows can override the
+// sender per-message (e.g. the Kia flow sends from its own account) by passing a
+// { phoneNumberId, token, label } to the send helpers; everything else uses this.
+const defaultSender = { phoneNumberId: whatsappPhoneNumberId, token: whatsappToken, label: 'default' };
 
-  if (!whatsappPhoneNumberId || !whatsappToken) {
-    console.error(`[whatsapp:send SKIPPED] ${label} — missing WHATSAPP_PHONE_NUMBER_ID or WHATSAPP_TOKEN`);
+async function whatsappPost(body, sender = defaultSender) {
+  const { phoneNumberId, token, label: acct } = sender || defaultSender;
+  const url = `https://graph.facebook.com/v19.0/${phoneNumberId}/messages`;
+  // A short label so each outbound is traceable in the logs (type + recipient + account).
+  const label = `${body.type}${body.interactive ? `/${body.interactive.type}` : ''} → ${body.to} [${acct || 'default'}]`;
+
+  if (!phoneNumberId || !token) {
+    console.error(`[whatsapp:send SKIPPED] ${label} — missing phone number id or token for this account`);
   }
 
   let response;
@@ -84,7 +90,7 @@ async function whatsappPost(body) {
     response = await fetch(url, {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${whatsappToken}`,
+        Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(body),
@@ -106,17 +112,17 @@ async function whatsappPost(body) {
   return json;
 }
 
-function sendText(to, text) {
-  return whatsappPost({ messaging_product: 'whatsapp', to, type: 'text', text: { body: text } });
+function sendText(to, text, sender) {
+  return whatsappPost({ messaging_product: 'whatsapp', to, type: 'text', text: { body: text } }, sender);
 }
 
-function sendImage(to, link, caption) {
+function sendImage(to, link, caption, sender) {
   const image = caption ? { link, caption } : { link };
-  return whatsappPost({ messaging_product: 'whatsapp', to, type: 'image', image });
+  return whatsappPost({ messaging_product: 'whatsapp', to, type: 'image', image }, sender);
 }
 
 // WhatsApp reply-button messages support at most 3 buttons.
-function sendButtons(to, bodyText, options) {
+function sendButtons(to, bodyText, options, sender) {
   return whatsappPost({
     messaging_product: 'whatsapp',
     to,
@@ -128,7 +134,7 @@ function sendButtons(to, bodyText, options) {
         buttons: options.map((option) => ({ type: 'reply', reply: { id: option.id, title: option.title } })),
       },
     },
-  });
+  }, sender);
 }
 
 // WhatsApp list messages: a single "menu" button plus up to 10 rows in one section.
@@ -187,9 +193,9 @@ async function sendEditOptions(to, result) {
 
 // Follow-up yes/no (or short multiple-choice) questions rendered as tappable
 // buttons. The tapped title flows back as the user's text (see interactiveReply).
-function sendQuickReplies(to, question, options) {
+function sendQuickReplies(to, question, options, sender) {
   const buttons = options.slice(0, BUTTONS_PER_MESSAGE).map((label) => ({ id: `qr:${label}`, title: label }));
-  return sendButtons(to, question, buttons);
+  return sendButtons(to, question, buttons, sender);
 }
 
 // ── Scripted-flow executor ────────────────────────────────────────────────────
@@ -198,29 +204,31 @@ function sendQuickReplies(to, question, options) {
 // pure and just describes what to send; all WhatsApp side effects live here. After an
 // image we pause (IMAGE_DELIVERY_DELAY_MS) so a following buttons/text message can't
 // land before the image — same reasoning as the edit-menu delay elsewhere.
-async function runScriptedSends(phoneNumber, sends) {
+async function runScriptedSends(phoneNumber, sends, sender) {
   for (const msg of sends || []) {
     if (msg.type === 'text') {
-      await sendText(phoneNumber, msg.text);
+      await sendText(phoneNumber, msg.text, sender);
       appendHistory(phoneNumber, 'assistant', msg.text);
     } else if (msg.type === 'progress') {
       // Streamed "working…" line, then a beat before the next message so the reveal
       // feels generated. Not stored in history (it's transient UX, not conversation).
-      await sendText(phoneNumber, msg.text);
+      await sendText(phoneNumber, msg.text, sender);
       await sleep(msg.delayAfterMs ?? GEN_STEP_DELAY_MS);
     } else if (msg.type === 'image') {
-      await sendImage(phoneNumber, msg.link, msg.caption);
+      await sendImage(phoneNumber, msg.link, msg.caption, sender);
       if (msg.caption) appendHistory(phoneNumber, 'assistant', msg.caption);
       await sleep(IMAGE_DELIVERY_DELAY_MS);
     } else if (msg.type === 'buttons') {
-      await sendQuickReplies(phoneNumber, msg.body, msg.options);
+      await sendQuickReplies(phoneNumber, msg.body, msg.options, sender);
       appendHistory(phoneNumber, 'assistant', msg.body);
     }
   }
 }
 
 // Handle one inbound message for a scripted demo phone. Starts the flow if there's no
-// active session, otherwise advances it. Fully deterministic — no LLM call.
+// active session, otherwise advances it. Fully deterministic — no LLM call. Each flow
+// may carry its own WhatsApp sender account (flow.__sender) — e.g. Kia sends from a
+// separate business account; Subway/others fall back to the default account.
 async function handleScriptedTurn(phoneNumber, flow, userText) {
   const active = scriptedSessions.get(phoneNumber);
   const { session, sends } = active
@@ -231,10 +239,11 @@ async function handleScriptedTurn(phoneNumber, flow, userText) {
     from: active?.stepKey || '(kickoff)',
     to: session?.stepKey || '(end)',
     sends: sends.length,
+    account: flow.__sender?.label || 'default',
   });
   if (session) scriptedSessions.set(phoneNumber, session);
   else scriptedSessions.delete(phoneNumber);
-  await runScriptedSends(phoneNumber, sends);
+  await runScriptedSends(phoneNumber, sends, flow.__sender || undefined);
 }
 
 // ── Flow 2 deterministic sequence executor ───────────────────────────────────
@@ -477,9 +486,14 @@ app.get('/health', (req, res) => {
 
 // ── Webhook routes ───────────────────────────────────────────────────────────
 
+// Accept the default verify token and, if set, the Kia account's own — so a second
+// Meta app (separate WABA) pointing its webhook here can still complete the handshake.
+// If the Kia number is under the SAME app, only VERIFY_TOKEN is needed.
+const verifyTokens = [verifyToken, process.env.KIA_VERIFY_TOKEN].filter(Boolean);
+
 app.get('/', (req, res) => {
   const { 'hub.mode': mode, 'hub.challenge': challenge, 'hub.verify_token': token } = req.query;
-  if (mode === 'subscribe' && token === verifyToken) {
+  if (mode === 'subscribe' && verifyTokens.includes(token)) {
     console.log('WEBHOOK VERIFIED');
     res.status(200).send(challenge);
   } else {

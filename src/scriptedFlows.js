@@ -16,10 +16,26 @@ const path = require('node:path');
 
 // Defaults are the eventual two-number setup (distinct numbers, no overlap). The
 // routing file / env override these — e.g. while testing on a single SIM.
+// `senderEnvPrefix` selects which WhatsApp Business account a flow SENDS from:
+//   - omitted  → the default account (WHATSAPP_PHONE_NUMBER_ID / WHATSAPP_TOKEN)
+//   - "KIA_WHATSAPP" → KIA_WHATSAPP_PHONE_NUMBER_ID / KIA_WHATSAPP_TOKEN
+// If a flow's sender env vars aren't set, it safely falls back to the default account.
 const FLOW_DEFS = [
   { key: 'subway', phoneEnv: 'SUBWAY_PHONE', fileEnv: 'SUBWAY_FLOW_FILE', default: '918328145692', file: 'subway-finals-week.json' },
-  { key: 'kia', phoneEnv: 'KIA_PHONE', fileEnv: 'KIA_FLOW_FILE', default: '919899860983', file: 'kia-seltos-followup.json' },
+  { key: 'kia', phoneEnv: 'KIA_PHONE', fileEnv: 'KIA_FLOW_FILE', default: '919899860983', file: 'kia-seltos-followup.json', senderEnvPrefix: 'KIA_WHATSAPP' },
 ];
+
+// Resolve a flow's WhatsApp sender account from env, or null to use the default.
+function resolveSender(def) {
+  if (!def.senderEnvPrefix) return null;
+  const phoneNumberId = process.env[`${def.senderEnvPrefix}_PHONE_NUMBER_ID`];
+  const token = process.env[`${def.senderEnvPrefix}_TOKEN`];
+  if (phoneNumberId && token) return { phoneNumberId, token, label: def.key };
+  console.warn(
+    `[scriptedFlows] ${def.key}: ${def.senderEnvPrefix}_PHONE_NUMBER_ID/_TOKEN not set — sending from the DEFAULT WhatsApp account`
+  );
+  return null;
+}
 
 function dataPath(fileEnv, fallbackFile) {
   return (fileEnv && process.env[fileEnv]) || path.join(__dirname, '..', 'data', fallbackFile);
@@ -56,8 +72,9 @@ function loadScriptedFlows() {
     try {
       const flow = loadFlow(filePath);
       const phone = String(process.env[def.phoneEnv] || routing[def.key] || flow.phone || def.default);
+      flow.__sender = resolveSender(def); // which WhatsApp account this flow sends from (null = default)
       byPhone.set(phone, flow);
-      resolved[def.key] = phone;
+      resolved[def.key] = `${phone} (sends from: ${flow.__sender ? def.senderEnvPrefix : 'default'})`;
     } catch (err) {
       console.error('[scriptedFlows] failed to load flow', { key: def.key, file: filePath, message: err.message });
     }
