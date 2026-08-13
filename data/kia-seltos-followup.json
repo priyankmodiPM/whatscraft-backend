@@ -1,5 +1,5 @@
 {
-  "_comment": "Kia 'Seltos follow-up' scripted demo flow (see Automotive note). Gated to KIA_PHONE. Swap the placeholder cdn.whatscraft.local banner URLs for your hosted images, and the contact display number if needed. Copy/steps are data-only. Engine: src/scriptedFlow.js.",
+  "_comment": "Kia 'Seltos follow-up' scripted demo flow (see Automotive note). Gated to KIA_PHONE. Copy is short/informal for WhatsApp. 'progress' messages stream a beat apart (GEN_STEP_DELAY_MS, ~1.6s) to make a banner reveal feel generated. Swap the Scene7 banner URLs / contact number as needed. Engine: src/scriptedFlow.js.",
   "phone": "919899860983",
   "start": "kickoff",
   "steps": {
@@ -7,7 +7,7 @@
       "onEnter": [
         {
           "type": "buttons",
-          "body": "Hi Rahul 👋 Mr. Sharma came in for a Seltos test drive 4 days back and hasn't heard back since. Want to follow up with him?",
+          "body": "Hey Rahul 👋\nApoorva test-drove the Seltos 4 days ago — no follow-up yet.\nWanna nudge her?",
           "options": ["✅ Yes, follow up", "🙅 Not now"]
         }
       ],
@@ -20,7 +20,7 @@
         "reask": [
           {
             "type": "buttons",
-            "body": "Shall I follow up with Mr. Sharma?",
+            "body": "Shall I nudge Apoorva?",
             "options": ["✅ Yes, follow up", "🙅 Not now"]
           }
         ]
@@ -29,7 +29,7 @@
 
     "not_now": {
       "onEnter": [
-        { "type": "text", "text": "No problem — I'll keep the lead warm and remind you later. 👍" }
+        { "type": "text", "text": "No worries — I'll keep the lead warm and ping you later 👍" }
       ]
     },
 
@@ -37,20 +37,20 @@
       "onEnter": [
         {
           "type": "buttons",
-          "body": "Got it — I've pulled up Mr. Sharma's profile: test-drive on the HTK, an exchange car on file, and he'd asked about a combined car + insurance offer. Want me to put together a banner for what he's looking for?",
+          "body": "Pulled up her profile 📋\n• Test-drove the HTK\n• Exchange car on file\n• Wanted a car + insurance combo\n\nShall I make a banner for it?",
           "options": ["✅ Yes, go ahead", "🙅 No"]
         }
       ],
       "await": {
         "kind": "buttons",
         "options": [
-          { "match": "Yes go ahead", "next": "ask_contact" },
+          { "match": "Yes go ahead", "next": "offer" },
           { "match": "No", "next": "no_banner" }
         ],
         "reask": [
           {
             "type": "buttons",
-            "body": "Shall I build the Seltos HTK + Insurance combo banner?",
+            "body": "Shall I build the banner?",
             "options": ["✅ Yes, go ahead", "🙅 No"]
           }
         ]
@@ -59,15 +59,40 @@
 
     "no_banner": {
       "onEnter": [
-        { "type": "text", "text": "No problem — ping me whenever you're ready and I'll build it. 👍" }
+        { "type": "text", "text": "All good — ping me whenever and I'll build it 👍" }
       ]
+    },
+
+    "offer": {
+      "onEnter": [
+        {
+          "type": "buttons",
+          "body": "Which insurance offer should I feature? 🛡️\nPick what Apoorva's most likely to go for:",
+          "options": ["🛡️ Zero Dep Cover", "🔧 Engine + RSA", "📅 3-Yr Comprehensive"]
+        }
+      ],
+      "await": {
+        "kind": "buttons",
+        "options": [
+          { "match": "Zero Dep Cover", "next": "ask_contact" },
+          { "match": "Engine + RSA", "next": "ask_contact" },
+          { "match": "3-Yr Comprehensive", "next": "ask_contact" }
+        ],
+        "reask": [
+          {
+            "type": "buttons",
+            "body": "Tap an insurance offer to feature:",
+            "options": ["🛡️ Zero Dep Cover", "🔧 Engine + RSA", "📅 3-Yr Comprehensive"]
+          }
+        ]
+      }
     },
 
     "ask_contact": {
       "onEnter": [
         {
           "type": "buttons",
-          "body": "On it — a Seltos HTK + Insurance combo, festive pricing, exchange-offer note included. Before I render it — want me to add your name & number so Mr. Sharma can reach you directly?",
+          "body": "Nice pick 👍\nBuilding the Seltos HTK + insurance combo now 🎯\nFestive pricing + exchange note, all in.\n\nAdd your name & number so she can reach you?",
           "options": ["✅ Yes, add it", "🙅 No, skip"]
         }
       ],
@@ -89,11 +114,14 @@
 
     "render_with_contact": {
       "onEnter": [
-        { "type": "text", "text": "Adding your contact — Rahul · +91 98998 60983 ✅ Rendering now… ⏳" },
+        { "type": "text", "text": "Adding your contact 📇\nRahul · +91 98998 60983" },
+        { "type": "progress", "text": "🎨 Laying out the design…" },
+        { "type": "progress", "text": "🚗 Dropping in the Seltos + combo…" },
+        { "type": "progress", "text": "📇 Placing your contact…" },
         {
           "type": "image",
           "link": "https://s7ap1.scene7.com/is/image/varunAEM/Kia-v1?cache=off",
-          "caption": "Here's the preview — how's this looking?"
+          "caption": "Here's the preview 👇 how's it looking?"
         }
       ],
       "await": { "kind": "any", "next": "localize" }
@@ -101,11 +129,14 @@
 
     "render_no_contact": {
       "onEnter": [
-        { "type": "text", "text": "No problem — leaving your contact off. Rendering now… ⏳" },
+        { "type": "text", "text": "Cool, no contact on this one 👍" },
+        { "type": "progress", "text": "🎨 Laying out the design…" },
+        { "type": "progress", "text": "🚗 Dropping in the Seltos + combo…" },
+        { "type": "progress", "text": "🏷️ Adding the festive pricing…" },
         {
           "type": "image",
           "link": "https://s7ap1.scene7.com/is/image/varunAEM/Kia-v1?cache=off",
-          "caption": "Here's the preview — how's this looking?"
+          "caption": "Here's the preview 👇 how's it looking?"
         }
       ],
       "await": { "kind": "any", "next": "localize" }
@@ -113,14 +144,17 @@
 
     "localize": {
       "onEnter": [
+        { "type": "progress", "text": "✍️ Translating to Hindi…" },
+        { "type": "progress", "text": "💰 Adding the on-road price…" },
+        { "type": "progress", "text": "🎨 Re-rendering the banner…" },
         {
           "type": "text",
-          "text": "Done ✅ Same banner — headline / offer / CTA now in Hindi, layout, Kia branding and combo details unchanged. Final on-road price added."
+          "text": "Done ✅\nSame banner, now in Hindi 🇮🇳\nFinal on-road price added too.\n(branding + layout untouched)"
         },
         {
           "type": "image",
           "link": "https://s7ap1.scene7.com/is/image/varunAEM/Kia-v2?cache=off",
-          "caption": "Ready to send to Mr. Sharma 🎉"
+          "caption": "Ready to send to Apoorva 🎉"
         }
       ]
     }
