@@ -54,20 +54,22 @@ echo
 send "hi"
 sleep "$PAUSE"
 
-# 1) Follow up → WC pulls Apoorva's profile, offers to build the banner [Yes, go ahead / No]
+# 1) Follow up → WC pulls Apoorva's profile and shows the 3-offer banner + picker in one
+#    message [💳 Low EMI / 0️⃣ Zero Down Payment / 🛡️ Insurance Off]
 tap "✅ Yes, follow up"
 sleep "$PAUSE"
 
-# 2) Build it → WC asks whether to add the salesman's contact
-tap "✅ Yes, go ahead"
+# 2) Pick an offer → WC asks which insurance plan to feature
+#    [3-Yr Comprehensive / Zero Dep + RSA / Engine Protect]
+tap "🛡️ Insurance Off"
 sleep "$PAUSE"
 
-# 3) Add contact → WC asks "anything else?" and waits
+# 3) Pick a plan → WC asks whether to add the salesman's contact [Yes, add it / No, skip]
+tap "3-Yr Comprehensive"
+sleep "$PAUSE"
+
+# 4) Add contact → WC confirms the contact and builds the preview (streamed progress)
 tap "✅ Yes, add it"
-sleep "$PAUSE"
-
-# 4) Anything else (free text) → WC builds the preview (streamed progress)
-send "She wanted the 3-Yr Comprehensive insurance plan"
 sleep "$PAUSE"
 
 # 5) Localize (free text) → WC re-renders in Hindi with the final on-road price (final)

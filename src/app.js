@@ -122,20 +122,19 @@ function sendImage(to, link, caption, sender) {
   return whatsappPost({ messaging_product: 'whatsapp', to, type: 'image', image }, sender);
 }
 
-// WhatsApp reply-button messages support at most 3 buttons.
-function sendButtons(to, bodyText, options, sender) {
-  return whatsappPost({
-    messaging_product: 'whatsapp',
-    to,
-    type: 'interactive',
-    interactive: {
-      type: 'button',
-      body: { text: bodyText },
-      action: {
-        buttons: options.map((option) => ({ type: 'reply', reply: { id: option.id, title: option.title } })),
-      },
+// WhatsApp reply-button messages support at most 3 buttons, and an optional media
+// header — pass headerImageLink to render an image in the SAME message as the buttons
+// (used by the Kia offer picker so the 3-offer banner and its buttons arrive together).
+function sendButtons(to, bodyText, options, sender, headerImageLink) {
+  const interactive = {
+    type: 'button',
+    body: { text: bodyText },
+    action: {
+      buttons: options.map((option) => ({ type: 'reply', reply: { id: option.id, title: option.title } })),
     },
-  }, sender);
+  };
+  if (headerImageLink) interactive.header = { type: 'image', image: { link: headerImageLink } };
+  return whatsappPost({ messaging_product: 'whatsapp', to, type: 'interactive', interactive }, sender);
 }
 
 // WhatsApp list messages: a single "menu" button plus up to 10 rows in one section.
@@ -194,9 +193,9 @@ async function sendEditOptions(to, result) {
 
 // Follow-up yes/no (or short multiple-choice) questions rendered as tappable
 // buttons. The tapped title flows back as the user's text (see interactiveReply).
-function sendQuickReplies(to, question, options, sender) {
+function sendQuickReplies(to, question, options, sender, headerImageLink) {
   const buttons = options.slice(0, BUTTONS_PER_MESSAGE).map((label) => ({ id: `qr:${label}`, title: label }));
-  return sendButtons(to, question, buttons, sender);
+  return sendButtons(to, question, buttons, sender, headerImageLink);
 }
 
 // ── Scripted-flow executor ────────────────────────────────────────────────────
@@ -220,7 +219,9 @@ async function runScriptedSends(phoneNumber, sends, sender) {
       if (msg.caption) appendHistory(phoneNumber, 'assistant', msg.caption);
       await sleep(IMAGE_DELIVERY_DELAY_MS);
     } else if (msg.type === 'buttons') {
-      await sendQuickReplies(phoneNumber, msg.body, msg.options, sender);
+      // msg.image (optional) rides along as the interactive message's media header,
+      // so the banner and its buttons land as a single message.
+      await sendQuickReplies(phoneNumber, msg.body, msg.options, sender, msg.image);
       appendHistory(phoneNumber, 'assistant', msg.body);
     }
   }

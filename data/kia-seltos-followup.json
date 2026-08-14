@@ -1,5 +1,5 @@
 {
-  "_comment": "Kia 'Seltos follow-up' scripted demo flow (see Automotive note). Gated to KIA_PHONE. Short/informal WhatsApp copy; 'progress' messages stream a beat apart (GEN_STEP_DELAY_MS, ~2.8s) so a banner reveal feels generated. Flow: nudge -> profile -> add contact -> render preview -> localize to Hindi + on-road price. Swap the Scene7 banner URLs / contact number as needed. Engine: src/scriptedFlow.js.",
+  "_comment": "Kia 'Seltos follow-up' scripted demo flow (see Automotive note). Gated to KIA_PHONE. Short/informal WhatsApp copy; 'progress' messages stream a beat apart (GEN_STEP_DELAY_MS, ~2.8s) so a banner reveal feels generated. Flow: nudge -> profile (pick 1 of 3 offers; merged image rides in the SAME interactive message as the buttons) -> pick 1 of 3 insurance plans -> add contact -> render preview -> localize to Hindi + on-road price. Swap the Scene7 banner URLs / contact number as needed. Engine: src/scriptedFlow.js.",
   "phone": "919899860983",
   "start": "kickoff",
   "steps": {
@@ -32,42 +32,67 @@
     "profile": {
       "onEnter": [
         {
+          "type": "text",
+          "text": "Pulled up her profile 📋\n• Test-drove the HTK\n• Exchange car on file\n• Wanted a car + insurance combo"
+        },
+        {
           "type": "buttons",
-          "body": "Pulled up her profile 📋\n• Test-drove the HTK\n• Exchange car on file\n• Wanted a car + insurance combo\n\nShall I make a banner for it?",
-          "options": ["✅ Yes, go ahead", "🙅 No"]
+          "image": "https://s7ap1.scene7.com/is/image/varunAEM/kia-offers-merged?cache=off",
+          "body": "Here are 3 offers that'd work for her 👇\nWhich one should I run with?",
+          "options": ["💳 Low EMI", "0️⃣ Zero Down Payment", "🛡️ Insurance Off"]
         }
       ],
       "await": {
         "kind": "buttons",
         "options": [
-          { "match": "Yes go ahead", "next": "ask_contact" },
-          { "match": "No", "next": "no_banner" }
+          { "match": "Low EMI", "next": "insurance_plan" },
+          { "match": "Zero Down Payment", "next": "insurance_plan" },
+          { "match": "Insurance Off", "next": "insurance_plan" }
         ],
         "reask": [
-          { "type": "buttons", "body": "Shall I build the banner?", "options": ["✅ Yes, go ahead", "🙅 No"] }
+          {
+            "type": "buttons",
+            "body": "Pick one of the 3 offers to run with.",
+            "options": ["💳 Low EMI", "0️⃣ Zero Down Payment", "🛡️ Insurance Off"]
+          }
         ]
       }
     },
 
-    "no_banner": {
+    "insurance_plan": {
       "onEnter": [
-        { "type": "text", "text": "All good — ping me whenever and I'll build it 👍" }
-      ]
+        {
+          "type": "buttons",
+          "body": "Nice — going with the insurance offer 🛡️\nShe wanted a car + insurance combo, so let's lock the plan that goes on the banner.\n\nWhich insurance plan should I feature?",
+          "options": ["3-Yr Comprehensive", "Zero Dep + RSA", "Engine Protect"]
+        }
+      ],
+      "await": {
+        "kind": "buttons",
+        "options": [
+          { "match": "3-Yr Comprehensive", "next": "ask_contact" },
+          { "match": "Zero Dep RSA", "next": "ask_contact" },
+          { "match": "Engine Protect", "next": "ask_contact" }
+        ],
+        "reask": [
+          { "type": "buttons", "body": "Pick an insurance plan to feature.", "options": ["3-Yr Comprehensive", "Zero Dep + RSA", "Engine Protect"] }
+        ]
+      }
     },
 
     "ask_contact": {
       "onEnter": [
         {
           "type": "buttons",
-          "body": "On it — building the Seltos HTK + insurance combo 🎯\nFestive pricing + exchange note, all in.\n\nAdd your name & number so she can reach you?",
+          "body": "On it — building the Seltos HTK banner with that offer 🎯\nFestive pricing + exchange note, all in.\n\nAdd your name & number so she can reach you?",
           "options": ["✅ Yes, add it", "🙅 No, skip"]
         }
       ],
       "await": {
         "kind": "buttons",
         "options": [
-          { "match": "Yes add it", "next": "anything_with_contact" },
-          { "match": "No skip", "next": "anything_no_contact" }
+          { "match": "Yes add it", "next": "render_with_contact" },
+          { "match": "No skip", "next": "render_no_contact" }
         ],
         "reask": [
           { "type": "buttons", "body": "Add your name & number to the banner?", "options": ["✅ Yes, add it", "🙅 No, skip"] }
@@ -75,28 +100,9 @@
       }
     },
 
-    "anything_with_contact": {
-      "onEnter": [
-        {
-          "type": "text",
-          "text": "Added your contact 📇 Rahul · +91 98998 60983\nAnything else you'd like to add before I build it?"
-        }
-      ],
-      "await": { "kind": "any", "next": "render_with_contact" }
-    },
-
-    "anything_no_contact": {
-      "onEnter": [
-        {
-          "type": "text",
-          "text": "No problem — no contact on this one 👍\nAnything else you'd like to add before I build it?"
-        }
-      ],
-      "await": { "kind": "any", "next": "render_no_contact" }
-    },
-
     "render_with_contact": {
       "onEnter": [
+        { "type": "text", "text": "Added your contact 📇 Rahul · +91 98998 60983" },
         { "type": "text", "text": "Got it — building your banner now… 🎯" },
         { "type": "progress", "text": "🎨 Laying out the design…" },
         { "type": "progress", "text": "🚗 Dropping in the Seltos + combo…" },
@@ -112,6 +118,7 @@
 
     "render_no_contact": {
       "onEnter": [
+        { "type": "text", "text": "No problem — no contact on this one 👍" },
         { "type": "text", "text": "Got it — building your banner now… 🎯" },
         { "type": "progress", "text": "🎨 Laying out the design…" },
         { "type": "progress", "text": "🚗 Dropping in the Seltos + combo…" },
