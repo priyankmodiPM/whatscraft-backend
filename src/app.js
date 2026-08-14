@@ -15,7 +15,7 @@ const {
 const { parseEditOptionId, messageTextForInteractiveReply } = require('./interactiveReply');
 const flow2Session = require('./flow2Session');
 const scriptedFlow = require('./scriptedFlow');
-const { loadScriptedFlows, flowForPhone } = require('./scriptedFlows');
+const { loadScriptedFlows, flowForAccount } = require('./scriptedFlows');
 
 const app = express();
 app.use(express.json());
@@ -525,6 +525,10 @@ app.post('/', async (req, res) => {
       }
     }
 
+    // Which WhatsApp Business account received this — routes scripted flows by account:
+    // the default account → Subway, the Kia account → Kia (see scriptedFlows.flowForAccount).
+    const businessPhoneNumberId = value?.metadata?.phone_number_id;
+
     const messages = value?.messages;
     if (!messages?.length) return;
 
@@ -542,10 +546,10 @@ app.post('/', async (req, res) => {
 
       appendHistory(phoneNumber, 'user', userText);
 
-      // Scripted demo phones (Subway, Kia) run their fixed script end-to-end and
-      // never touch the LLM: no session ⇒ kickoff, session present ⇒ advance. Checked
-      // first so these numbers are always fully deterministic.
-      const scripted = flowForPhone(scriptedFlows, phoneNumber);
+      // Route scripted flows by the WhatsApp Business account that RECEIVED the message
+      // (not the sender): messages to the default account run the Subway script, messages
+      // to the Kia account run the Kia script. Fully deterministic, no LLM. Checked first.
+      const scripted = flowForAccount(scriptedFlows, businessPhoneNumberId);
       if (scripted) {
         await handleScriptedTurn(phoneNumber, scripted, userText);
         continue;

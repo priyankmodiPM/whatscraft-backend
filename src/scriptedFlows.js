@@ -73,8 +73,12 @@ function loadScriptedFlows() {
       const flow = loadFlow(filePath);
       const phone = String(process.env[def.phoneEnv] || routing[def.key] || flow.phone || def.default);
       flow.__sender = resolveSender(def); // which WhatsApp account this flow sends from (null = default)
+      // The business account this flow OWNS = its sender's phone-number-id, or the
+      // default account's id when the flow has no dedicated account. Inbound messages
+      // are routed to a flow by the account they arrive on (webhook metadata.phone_number_id).
+      flow.__accountId = flow.__sender?.phoneNumberId || process.env.WHATSAPP_PHONE_NUMBER_ID || null;
       byPhone.set(phone, flow);
-      resolved[def.key] = `${phone} (sends from: ${flow.__sender ? def.senderEnvPrefix : 'default'})`;
+      resolved[def.key] = `${phone} (account: ${flow.__accountId ?? 'unset'} / ${flow.__sender ? def.senderEnvPrefix : 'default'})`;
     } catch (err) {
       console.error('[scriptedFlows] failed to load flow', { key: def.key, file: filePath, message: err.message });
     }
@@ -97,4 +101,16 @@ function flowForPhone(byPhone, phoneNumber) {
   return null;
 }
 
-module.exports = { loadScriptedFlows, flowForPhone };
+// Resolve the scripted flow by the WhatsApp Business account that RECEIVED the message
+// (webhook metadata.phone_number_id). This is the primary router: a message to the
+// default account triggers Subway; a message to the Kia account triggers Kia.
+function flowForAccount(byPhone, businessPhoneNumberId) {
+  if (!businessPhoneNumberId) return null;
+  const id = String(businessPhoneNumberId);
+  for (const flow of byPhone.values()) {
+    if (flow.__accountId && String(flow.__accountId) === id) return flow;
+  }
+  return null;
+}
+
+module.exports = { loadScriptedFlows, flowForPhone, flowForAccount };

@@ -8,7 +8,7 @@ process.env.SUBWAY_PHONE = '918328145692';
 process.env.KIA_PHONE = '919899860983';
 
 const scriptedFlow = require('./scriptedFlow');
-const { loadScriptedFlows, flowForPhone } = require('./scriptedFlows');
+const { loadScriptedFlows, flowForPhone, flowForAccount } = require('./scriptedFlows');
 
 // ── Engine unit tests (tiny inline flow) ─────────────────────────────────────
 
@@ -86,6 +86,25 @@ test('Kia sends from its own WhatsApp account when configured; Subway uses the d
     });
     assert.strictEqual(flowForPhone(flows, '918328145692').__sender, null, 'subway uses the default account');
   } finally {
+    delete process.env.KIA_WHATSAPP_PHONE_NUMBER_ID;
+    delete process.env.KIA_WHATSAPP_TOKEN;
+  }
+});
+
+test('flowForAccount routes by the receiving business account', () => {
+  process.env.WHATSAPP_PHONE_NUMBER_ID = 'DEFAULT_PID';
+  process.env.KIA_WHATSAPP_PHONE_NUMBER_ID = 'KIA_PID';
+  process.env.KIA_WHATSAPP_TOKEN = 'kiatok';
+  try {
+    const flows = loadScriptedFlows();
+    const subway = flowForPhone(flows, '918328145692');
+    const kia = flowForPhone(flows, '919899860983');
+    assert.strictEqual(flowForAccount(flows, 'DEFAULT_PID'), subway, 'default account → Subway');
+    assert.strictEqual(flowForAccount(flows, 'KIA_PID'), kia, 'Kia account → Kia');
+    assert.strictEqual(flowForAccount(flows, 'UNKNOWN_ID'), null, 'unmatched account → no flow');
+    assert.strictEqual(flowForAccount(flows, undefined), null, 'missing account → no flow');
+  } finally {
+    delete process.env.WHATSAPP_PHONE_NUMBER_ID;
     delete process.env.KIA_WHATSAPP_PHONE_NUMBER_ID;
     delete process.env.KIA_WHATSAPP_TOKEN;
   }

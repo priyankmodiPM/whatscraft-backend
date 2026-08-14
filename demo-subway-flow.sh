@@ -17,12 +17,15 @@ set -euo pipefail
 BASE_URL="${BASE_URL:-http://localhost:3000}"
 PHONE="${PHONE:-${SUBWAY_PHONE:-919899860983}}"
 PAUSE="${PAUSE:-10}"
+# Routing is by the RECEIVING business account; the simulated webhook carries
+# metadata.phone_number_id = ACCOUNT_ID. Sender (PHONE) is arbitrary.
+ACCOUNT_ID="${ACCOUNT_ID:-${WHATSAPP_PHONE_NUMBER_ID:-1174719859057684}}"
 
 # Send a free-text WhatsApp message.
 send() {
   echo ">>> [text] $1"
   curl -s -X POST "$BASE_URL/" -H 'Content-Type: application/json' -d "$(cat <<JSON
-{"object":"whatsapp_business_account","entry":[{"changes":[{"value":{"messages":[
+{"object":"whatsapp_business_account","entry":[{"changes":[{"value":{"metadata":{"phone_number_id":"$ACCOUNT_ID"},"messages":[
 {"from":"$PHONE","type":"text","text":{"body":"$1"}}]}}]}]}
 JSON
 )" >/dev/null
@@ -34,7 +37,7 @@ JSON
 tap() {
   echo ">>> [tap button] $1"
   curl -s -X POST "$BASE_URL/" -H 'Content-Type: application/json' -d "$(cat <<JSON
-{"object":"whatsapp_business_account","entry":[{"changes":[{"value":{"messages":[
+{"object":"whatsapp_business_account","entry":[{"changes":[{"value":{"metadata":{"phone_number_id":"$ACCOUNT_ID"},"messages":[
 {"from":"$PHONE","type":"interactive","interactive":{"type":"button_reply","button_reply":{"id":"qr:$1","title":"$1"}}}]}}]}]}
 JSON
 )" >/dev/null
