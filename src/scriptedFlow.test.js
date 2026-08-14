@@ -164,7 +164,7 @@ function walk(flow, replies) {
   return { session, emitted };
 }
 
-test('Subway golden path runs kickoff → sent and emits all five banners', () => {
+test('Subway golden path runs kickoff → sent and emits all four banners', () => {
   const flow = flowForPhone(loadScriptedFlows(), '918328145692');
   const { session, emitted } = walk(flow, [
     '✏️ Edit',
@@ -172,12 +172,11 @@ test('Subway golden path runs kickoff → sent and emits all five banners', () =
     '✅ Yes, ₹250',
     'add a gluten free tag',
     '🥖 Swap to GF base',
-    'first 20 customers extra 10% off',
     '🔀 Dono',
   ]);
   assert.strictEqual(session, null, 'flow ends after channel pick');
   const images = emitted.filter((m) => m.type === 'image').map((m) => m.link);
-  assert.strictEqual(images.length, 5, 'v0–v4 all delivered');
+  assert.strictEqual(images.length, 4, 'v1–v4 all delivered');
   assert.ok(images.every((l) => /^https?:\/\//.test(l)), 'every banner has a real URL');
 });
 

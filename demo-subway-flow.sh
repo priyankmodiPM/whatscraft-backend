@@ -49,7 +49,7 @@ echo "=== Subway 'Finals Week' flow → $BASE_URL  (sender: $PHONE) ==="
 echo "    (server gates Subway to $PHONE — default needs no env; else SUBWAY_PHONE=$PHONE)"
 echo
 
-# 0) Any first message kicks it off → WC sends banner v0 + [Edit] [Send as-is]
+# 0) Any first message kicks it off → WC sends banner v1 + [Edit] [Send as-is]
 send "hi"
 sleep "$PAUSE"
 
@@ -57,11 +57,11 @@ sleep "$PAUSE"
 tap "✏️ Edit"
 sleep "$PAUSE"
 
-# 2) Describe the combo (free text) → WC builds v1 + suggests ₹250 [buttons]
+# 2) Describe the combo (free text) → WC builds v2 + suggests ₹250 [buttons]
 send "I have a lot of chicken in stock — do a chicken tikka sub combo: Sub + Cookie + Cold Drink, match-day special"
 sleep "$PAUSE"
 
-# 3) Accept the price → WC renders v2 (match-day pricing)
+# 3) Accept the price → WC renders v3 (match-day pricing)
 tap "✅ Yes, ₹250"
 sleep "$PAUSE"
 
@@ -69,15 +69,11 @@ sleep "$PAUSE"
 send "Add a Gluten Free tag in the corner — my gym crowd keeps asking"
 sleep "$PAUSE"
 
-# 5) Swap the bread → WC renders v3 (gluten-free base + cookie caveat)
+# 5) Swap the bread → WC renders v4 (gluten-free base + cookie caveat) + channel picker [buttons]
 tap "🥖 Swap to GF base"
 sleep "$PAUSE"
 
-# 6) Add the first-20 hook (Hinglish free text) → WC renders v4 + channel picker [buttons]
-send "Ek aur — first 20 customers ko extra 10% off do agar WhatsApp pe ye banner dikhayein"
-sleep "$PAUSE"
-
-# 7) Send on both channels → WC confirms, flow ends
+# 6) Send on both channels → WC confirms, flow ends
 tap "🔀 Dono"
 
-echo "=== done — verify banners v0→v4 and the final confirmation in the server logs ==="
+echo "=== done — verify banners v1→v4 and the final confirmation in the server logs ==="
