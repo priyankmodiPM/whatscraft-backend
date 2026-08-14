@@ -62,11 +62,15 @@ sleep "$PAUSE"
 tap "✅ Yes, go ahead"
 sleep "$PAUSE"
 
-# 3) Add contact → WC confirms the known number and renders the preview (streamed progress)
+# 3) Add contact → WC asks "anything else?" and waits
 tap "✅ Yes, add it"
 sleep "$PAUSE"
 
-# 4) Localize (free text) → WC re-renders in Hindi with the final on-road price (final)
+# 4) Anything else (free text) → WC builds the preview (streamed progress)
+send "She wanted the 3-Yr Comprehensive insurance plan"
+sleep "$PAUSE"
+
+# 5) Localize (free text) → WC re-renders in Hindi with the final on-road price (final)
 send "One more — Apoorva prefers Hindi. Generate it in Hindi, and add the final on-road price."
 
 echo "=== done — verify the preview + final Hindi/on-road banner in the server logs ==="

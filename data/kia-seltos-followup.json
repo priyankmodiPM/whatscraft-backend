@@ -66,8 +66,8 @@
       "await": {
         "kind": "buttons",
         "options": [
-          { "match": "Yes add it", "next": "render_with_contact" },
-          { "match": "No skip", "next": "render_no_contact" }
+          { "match": "Yes add it", "next": "anything_with_contact" },
+          { "match": "No skip", "next": "anything_no_contact" }
         ],
         "reask": [
           { "type": "buttons", "body": "Add your name & number to the banner?", "options": ["✅ Yes, add it", "🙅 No, skip"] }
@@ -75,9 +75,29 @@
       }
     },
 
+    "anything_with_contact": {
+      "onEnter": [
+        {
+          "type": "text",
+          "text": "Added your contact 📇 Rahul · +91 98998 60983\nAnything else you'd like to add before I build it?"
+        }
+      ],
+      "await": { "kind": "any", "next": "render_with_contact" }
+    },
+
+    "anything_no_contact": {
+      "onEnter": [
+        {
+          "type": "text",
+          "text": "No problem — no contact on this one 👍\nAnything else you'd like to add before I build it?"
+        }
+      ],
+      "await": { "kind": "any", "next": "render_no_contact" }
+    },
+
     "render_with_contact": {
       "onEnter": [
-        { "type": "text", "text": "Adding your contact 📇\nRahul · +91 98998 60983" },
+        { "type": "text", "text": "Got it — building your banner now… 🎯" },
         { "type": "progress", "text": "🎨 Laying out the design…" },
         { "type": "progress", "text": "🚗 Dropping in the Seltos + combo…" },
         { "type": "progress", "text": "📇 Placing your contact…" },
@@ -92,7 +112,7 @@
 
     "render_no_contact": {
       "onEnter": [
-        { "type": "text", "text": "Cool, no contact on this one 👍" },
+        { "type": "text", "text": "Got it — building your banner now… 🎯" },
         { "type": "progress", "text": "🎨 Laying out the design…" },
         { "type": "progress", "text": "🚗 Dropping in the Seltos + combo…" },
         { "type": "progress", "text": "🏷️ Adding the festive pricing…" },

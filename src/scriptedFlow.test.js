@@ -207,11 +207,13 @@ test('Kia golden path runs kickoff → localized banner with contact', () => {
     '✅ Yes, follow up',
     '✅ Yes, go ahead',
     '✅ Yes, add it',
+    'She wanted the 3-Yr Comprehensive plan', // anything-else (free text) → then renders
     'make it Hindi and add the on-road price',
   ]);
   assert.strictEqual(session, null);
   const texts = emitted.filter((m) => m.type === 'text').map((m) => m.text).join('\n');
   assert.ok(/\+91 98998 60983/.test(texts), 'confirms adding the known contact number');
+  assert.ok(/Anything else/.test(texts), 'asks anything-else before building');
   const images = emitted.filter((m) => m.type === 'image').map((m) => m.link);
   assert.strictEqual(images.length, 2, 'contact preview + final Hindi banner');
   assert.ok(emitted.some((m) => m.type === 'progress'), 'streams generation progress');
@@ -229,10 +231,11 @@ test('Kia "No, skip" still reaches the localized banner (no contact line)', () =
     '✅ Yes, follow up',
     '✅ Yes, go ahead',
     '🙅 No, skip',
+    'nothing else',            // anything-else (free text)
     'Hindi + on-road price',
   ]);
   assert.strictEqual(session, null);
   const texts = emitted.filter((m) => m.type === 'text').map((m) => m.text).join('\n');
   assert.ok(/no contact on this one/.test(texts));
-  assert.ok(!/Adding your contact/.test(texts));
+  assert.ok(!/\+91 98998 60983/.test(texts), 'contact number not added when skipped');
 });
