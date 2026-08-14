@@ -529,12 +529,12 @@ app.post('/', async (req, res) => {
     const messages = value?.messages;
     if (!messages?.length) return;
 
-    // The WhatsApp Business number the customer TEXTED — i.e. which demo account
-    // received the message. This is what selects a scripted flow, not who sent it:
-    // Subway and Kia each own a distinct business number, so a customer texting
-    // Kia's number always gets the Kia script regardless of the customer's own
-    // phone. Digits-only to tolerate any +/dash formatting on display_phone_number.
-    const businessNumber = String(value?.metadata?.display_phone_number || '').replace(/\D/g, '');
+    // The WhatsApp Business ACCOUNT the customer TEXTED — Meta's stable phone_number_id
+    // for the receiving number. This is what selects a scripted flow, not who sent it:
+    // Subway and Kia each own a distinct business account (1174719859057684 → Subway,
+    // 1200280473175726 → Kia), so a customer texting Kia's account always gets the Kia
+    // script regardless of the customer's own phone.
+    const businessPhoneNumberId = value?.metadata?.phone_number_id;
 
     for (const message of messages) {
       if (message.context) console.log('[webhook] message.context:', JSON.stringify(message.context));
@@ -546,18 +546,17 @@ app.post('/', async (req, res) => {
       if (!userText) continue;
 
       const phoneNumber = message.from;
-      console.log(`Message from ${phoneNumber} to business number ${businessNumber}: ${userText}`);
+      console.log(`Message from ${phoneNumber} to account ${businessPhoneNumberId}: ${userText}`);
 
       appendHistory(phoneNumber, 'user', userText);
 
-      // Scripted demo phones (Subway, Kia) run their fixed script end-to-end and
-      // never touch the LLM: no session ⇒ kickoff, session present ⇒ advance. Checked
-      // first so these numbers are always fully deterministic. Prefers the business
-      // number the message was sent to (correct for Kia, which has its own dedicated
-      // account) and falls back to the sender's number (needed for Subway, which has
-      // no dedicated account of its own — see flowForMessage). Replies always go back
-      // to `phoneNumber` (the customer) regardless of which matched — see runScriptedSends.
-      const scripted = flowForMessage(scriptedFlows, { businessNumber, senderNumber: phoneNumber });
+      // Scripted demo flows (Subway, Kia) run their fixed script end-to-end and never
+      // touch the LLM: no session ⇒ kickoff, session present ⇒ advance. Checked first so
+      // these are fully deterministic. Prefers the business ACCOUNT the message was
+      // received on (metadata.phone_number_id) and falls back to the sender's number
+      // (for local/demo webhooks with no account id — see flowForMessage). Replies
+      // always go back to `phoneNumber` (the customer) regardless — see runScriptedSends.
+      const scripted = flowForMessage(scriptedFlows, { businessPhoneNumberId, senderNumber: phoneNumber });
       if (scripted) {
         await handleScriptedTurn(phoneNumber, scripted, userText);
         continue;

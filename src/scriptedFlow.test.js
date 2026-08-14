@@ -8,7 +8,7 @@ process.env.SUBWAY_PHONE = '918328145692';
 process.env.KIA_PHONE = '919899860983';
 
 const scriptedFlow = require('./scriptedFlow');
-const { loadScriptedFlows, flowForPhone, flowForMessage } = require('./scriptedFlows');
+const { loadScriptedFlows, flowForPhone, flowForAccount, flowForMessage } = require('./scriptedFlows');
 
 // ── Engine unit tests (tiny inline flow) ─────────────────────────────────────
 
@@ -105,25 +105,49 @@ test('flowForPhone prefers the longest (most-specific) registered number', () =>
   assert.strictEqual(flowForPhone(map, '1112223334'), null);
 });
 
-test('flowForMessage matches on the business number when a flow has its own dedicated account', () => {
-  // Kia: any customer texting Kia's own number should get the Kia flow, regardless
-  // of who's sending — the business number alone must be enough to resolve it.
-  const flows = loadScriptedFlows();
-  const resolved = flowForMessage(flows, { businessNumber: '919899860983', senderNumber: '911234500000' });
-  assert.strictEqual(resolved, flowForPhone(flows, '919899860983'));
+test('flowForAccount routes by the receiving business account (phone_number_id)', () => {
+  process.env.WHATSAPP_PHONE_NUMBER_ID = 'DEFAULT_PID';
+  process.env.KIA_WHATSAPP_PHONE_NUMBER_ID = 'KIA_PID';
+  process.env.KIA_WHATSAPP_TOKEN = 'kiatok';
+  try {
+    const flows = loadScriptedFlows();
+    assert.strictEqual(flowForAccount(flows, 'DEFAULT_PID'), flowForPhone(flows, '918328145692'), 'default → Subway');
+    assert.strictEqual(flowForAccount(flows, 'KIA_PID'), flowForPhone(flows, '919899860983'), 'Kia account → Kia');
+    assert.strictEqual(flowForAccount(flows, 'UNKNOWN_ID'), null);
+    assert.strictEqual(flowForAccount(flows, undefined), null);
+  } finally {
+    delete process.env.WHATSAPP_PHONE_NUMBER_ID;
+    delete process.env.KIA_WHATSAPP_PHONE_NUMBER_ID;
+    delete process.env.KIA_WHATSAPP_TOKEN;
+  }
 });
 
-test('flowForMessage falls back to the sender number when the business number matches no flow', () => {
-  // Subway shares the default WhatsApp account, so it has no business number of its
-  // own to key on — it can only be reached by matching who's sending (the demo SIM).
+test('flowForMessage matches on the business account when a flow has its own dedicated account', () => {
+  // Kia: any customer texting Kia's account should get the Kia flow, regardless of the
+  // sender — the account id (phone_number_id) alone must be enough to resolve it.
+  process.env.KIA_WHATSAPP_PHONE_NUMBER_ID = 'KIA_PID';
+  process.env.KIA_WHATSAPP_TOKEN = 'kiatok';
+  try {
+    const flows = loadScriptedFlows();
+    const resolved = flowForMessage(flows, { businessPhoneNumberId: 'KIA_PID', senderNumber: '911234500000' });
+    assert.strictEqual(resolved, flowForPhone(flows, '919899860983'));
+  } finally {
+    delete process.env.KIA_WHATSAPP_PHONE_NUMBER_ID;
+    delete process.env.KIA_WHATSAPP_TOKEN;
+  }
+});
+
+test('flowForMessage falls back to the sender number when the business account matches no flow', () => {
+  // No account matches → fall back to matching who's sending (e.g. local/demo webhooks
+  // that carry no account id).
   const flows = loadScriptedFlows();
-  const resolved = flowForMessage(flows, { businessNumber: '15550009999', senderNumber: '918328145692' });
+  const resolved = flowForMessage(flows, { businessPhoneNumberId: 'UNKNOWN_ACCT', senderNumber: '918328145692' });
   assert.strictEqual(resolved, flowForPhone(flows, '918328145692'));
 });
 
-test('flowForMessage returns null when neither the business number nor the sender matches any flow', () => {
+test('flowForMessage returns null when neither the business account nor the sender matches any flow', () => {
   const flows = loadScriptedFlows();
-  assert.strictEqual(flowForMessage(flows, { businessNumber: '15550009999', senderNumber: '911112223334' }), null);
+  assert.strictEqual(flowForMessage(flows, { businessPhoneNumberId: 'UNKNOWN_ACCT', senderNumber: '911112223334' }), null);
 });
 
 // Walk a flow along a scripted path of user replies, asserting it ends (session null)

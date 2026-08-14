@@ -80,8 +80,12 @@ function loadScriptedFlows() {
       const flow = loadFlow(filePath);
       const phone = String(process.env[def.phoneEnv] || routing[def.key] || flow.phone || def.default);
       flow.__sender = resolveSender(def); // which WhatsApp account this flow sends from (null = default)
+      // The business account this flow OWNS = its sender's phone-number-id, or the default
+      // account's id when the flow has none. Inbound messages are routed to a flow by the
+      // account they arrive on (webhook metadata.phone_number_id) — see flowForAccount.
+      flow.__accountId = flow.__sender?.phoneNumberId || process.env.WHATSAPP_PHONE_NUMBER_ID || null;
       byPhone.set(phone, flow);
-      resolved[def.key] = `${phone} (sends from: ${flow.__sender ? def.senderEnvPrefix : 'default'})`;
+      resolved[def.key] = `${phone} (account: ${flow.__accountId ?? 'unset'} / ${flow.__sender ? def.senderEnvPrefix : 'default'})`;
     } catch (err) {
       console.error('[scriptedFlows] failed to load flow', { key: def.key, file: filePath, message: err.message });
     }
@@ -105,12 +109,23 @@ function flowForPhone(byPhone, number) {
   return null;
 }
 
-// Resolve the scripted flow for an inbound message. Tries the business number first
-// (correct for flows with their own dedicated WhatsApp account, e.g. Kia), then falls
-// back to the sender's number (needed for flows like Subway that share the default
-// account and have no business number of their own to key on).
-function flowForMessage(byPhone, { businessNumber, senderNumber } = {}) {
-  return flowForPhone(byPhone, businessNumber) || flowForPhone(byPhone, senderNumber);
+// Resolve the scripted flow by the WhatsApp Business ACCOUNT that received the message
+// (webhook metadata.phone_number_id), matched against each flow's __accountId. Primary
+// router: 1174719859057684 (default) → Subway, 1200280473175726 (Kia) → Kia.
+function flowForAccount(byPhone, businessPhoneNumberId) {
+  if (!businessPhoneNumberId) return null;
+  const id = String(businessPhoneNumberId);
+  for (const flow of byPhone.values()) {
+    if (flow.__accountId && String(flow.__accountId) === id) return flow;
+  }
+  return null;
 }
 
-module.exports = { loadScriptedFlows, flowForPhone, flowForMessage };
+// Resolve the scripted flow for an inbound message: prefer the business ACCOUNT the
+// message was received on (metadata.phone_number_id), then fall back to matching the
+// sender's number (kept from #30 — e.g. local/demo webhooks that carry no account id).
+function flowForMessage(byPhone, { businessPhoneNumberId, senderNumber } = {}) {
+  return flowForAccount(byPhone, businessPhoneNumberId) || flowForPhone(byPhone, senderNumber);
+}
+
+module.exports = { loadScriptedFlows, flowForPhone, flowForAccount, flowForMessage };
