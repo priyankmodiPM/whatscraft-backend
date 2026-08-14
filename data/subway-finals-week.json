@@ -1,5 +1,5 @@
 {
-  "_comment": "Subway 'Finals Week' scripted demo flow (see docs QSR note). Gated to SUBWAY_PHONE. Swap the placeholder banner URLs for your hosted v0–v4 images. Copy/steps are data-only; edit freely. Engine: src/scriptedFlow.js. PROPOSED REVISION: first-20/10%-off step removed; copy made informal + bulleted; in-progress 'Generated using Adobe Express' lines added before generated banners.",
+  "_comment": "Subway 'Finals Week' scripted demo flow (see docs QSR note). Gated to SUBWAY_PHONE. Swap the placeholder banner URLs for your hosted v0–v4 images. Copy/steps are data-only; edit freely. Engine: src/scriptedFlow.js. PROPOSED REVISION: first-20/10%-off step removed; copy made informal + bulleted; in-progress 'Generating with Express' lines (type: progress) added before generated banners, with a real GEN_STEP_DELAY_MS pause between them.",
   "phone": "918328145692",
   "start": "kickoff",
   "steps": {
@@ -54,8 +54,8 @@
     "combo": {
       "onEnter": [
         { "type": "text", "text": "Good call — combos convert better during Finals Week. 👍" },
-        { "type": "text", "text": "🎨 Designing your combo banner…" },
-        { "type": "text", "text": "✨ Generated using Adobe Express" },
+        { "type": "progress", "text": "🎨 Designing your combo banner…" },
+        { "type": "progress", "text": "✨ Generating with Express" },
         {
           "type": "image",
           "link": "https://s7ap1.scene7.com/is/image/varunAEM/Subway-v2?cache=off",
@@ -102,8 +102,8 @@
 
     "matchday": {
       "onEnter": [
-        { "type": "text", "text": "🎨 Updating the price on your banner…" },
-        { "type": "text", "text": "✨ Generated using Adobe Express" },
+        { "type": "progress", "text": "🎨 Updating the price on your banner…" },
+        { "type": "progress", "text": "✨ Generating with Express" },
         {
           "type": "text",
           "text": "Done ✅\n\n• ₹350 struck through, ₹250 highlighted\n• Cricket-ball motif added to the corner"
@@ -121,7 +121,7 @@
       "onEnter": [
         {
           "type": "buttons",
-          "body": "Heads up — I can't tag this gluten-free as it stands. ⚠️\nThe regular sub roll has wheat, so that'd be a false claim + an allergen-compliance risk.\n\nThree accurate ways to still win the gym crowd:\n\n🥖 Swap to GF base — rebuild on our approved gluten-free bread, so the tag is genuinely accurate\n🥗 Feature Veggie Delite — spotlight the salad, tagged \"Lighter option\"\n💪 High-Protein badge — keep the sub, add \"High Protein • Loaded with Veggies\" (no bread claim)\n\nWhich one?",
+          "body": "Heads up — I can't tag this gluten-free as it stands. ⚠️\nThe regular sub roll has wheat, so that'd be a false claim + an allergen-compliance risk.\n\nBut there are a few accurate ways to still win the gym crowd — which one?",
           "options": ["🥖 Swap to GF base", "🥗 Veggie Delite", "💪 High-Protein"]
         }
       ],
@@ -144,8 +144,8 @@
 
     "gf_swapped": {
       "onEnter": [
-        { "type": "text", "text": "🎨 Rebuilding the sub on the GF base…" },
-        { "type": "text", "text": "✨ Generated using Adobe Express" },
+        { "type": "progress", "text": "🎨 Rebuilding the sub on the GF base…" },
+        { "type": "progress", "text": "✨ Generating with Express" },
         {
           "type": "text",
           "text": "On it ✅\n\n• Sub rebuilt on the gluten-free base\n• Heads up: the cookie still has gluten, so I can't tag the whole combo GF\n• Tag now reads \"SUB MADE ON GLUTEN-FREE BREAD\" — accurate, and still speaks to the same crowd"
