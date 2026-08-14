@@ -204,37 +204,53 @@ test('Kia golden path runs kickoff → localized banner with contact', () => {
   const flow = flowForPhone(loadScriptedFlows(), '919899860983');
   const { session, emitted } = walk(flow, [
     '✅ Yes, follow up',
-    '✅ Yes, go ahead',
-    '✅ Yes, add it',
-    'She wanted the 3-Yr Comprehensive plan', // anything-else (free text) → then renders
+    '🛡️ Insurance Off',   // offer picker
+    '3-Yr Comprehensive', // insurance plan (now before contact)
+    '✅ Yes, add it',       // add contact → then renders
     'make it Hindi and add the on-road price',
   ]);
   assert.strictEqual(session, null);
-  const texts = emitted.filter((m) => m.type === 'text').map((m) => m.text).join('\n');
-  assert.ok(/\+91 98998 60983/.test(texts), 'confirms adding the known contact number');
-  assert.ok(/Anything else/.test(texts), 'asks anything-else before building');
+  const bodies = emitted.map((m) => m.text || m.body || m.caption || '').join('\n');
+  assert.ok(/\+91 98998 60983/.test(bodies), 'confirms adding the known contact number');
+  assert.ok(
+    emitted.some((m) => m.type === 'buttons' && m.image && m.options.includes('🛡️ Insurance Off')),
+    'offer picker carries the merged image in the same message as its buttons'
+  );
+  assert.ok(
+    emitted.some((m) => m.type === 'buttons' && m.options.includes('3-Yr Comprehensive')),
+    'offers the insurance plans incl. 3-Yr Comprehensive'
+  );
   const images = emitted.filter((m) => m.type === 'image').map((m) => m.link);
-  assert.strictEqual(images.length, 2, 'contact preview + final Hindi banner');
+  assert.strictEqual(images.length, 2, 'contact preview + final Hindi banner (offer image is a header)');
   assert.ok(emitted.some((m) => m.type === 'progress'), 'streams generation progress');
 });
 
-test('Kia "Not now" and "No" are clean exits', () => {
+test('Kia "Not now" is a clean exit', () => {
   const flow = flowForPhone(loadScriptedFlows(), '919899860983');
   assert.strictEqual(walk(flow, ['🙅 Not now']).session, null);
-  assert.strictEqual(walk(flow, ['✅ Yes, follow up', '🙅 No']).session, null);
+});
+
+test('Kia profile step re-asks the offer picker on an unrecognised reply', () => {
+  const flow = flowForPhone(loadScriptedFlows(), '919899860983');
+  let { session, sends } = scriptedFlow.start(flow);
+  ({ session, sends } = scriptedFlow.advance(flow, session, '✅ Yes, follow up'));
+  const before = session.stepKey;
+  ({ session, sends } = scriptedFlow.advance(flow, session, 'purple monkey dishwasher'));
+  assert.strictEqual(session.stepKey, before, 'stays on the profile step');
+  assert.ok(sends.some((m) => m.type === 'buttons'), 're-asks with buttons');
 });
 
 test('Kia "No, skip" still reaches the localized banner (no contact line)', () => {
   const flow = flowForPhone(loadScriptedFlows(), '919899860983');
   const { session, emitted } = walk(flow, [
     '✅ Yes, follow up',
-    '✅ Yes, go ahead',
-    '🙅 No, skip',
-    'nothing else',            // anything-else (free text)
+    '💳 Low EMI',              // offer picker
+    'Zero Dep + RSA',          // insurance plan (now before contact)
+    '🙅 No, skip',             // skip contact
     'Hindi + on-road price',
   ]);
   assert.strictEqual(session, null);
-  const texts = emitted.filter((m) => m.type === 'text').map((m) => m.text).join('\n');
-  assert.ok(/no contact on this one/.test(texts));
-  assert.ok(!/\+91 98998 60983/.test(texts), 'contact number not added when skipped');
+  const bodies = emitted.map((m) => m.text || m.body || m.caption || '').join('\n');
+  assert.ok(/no contact on this one/.test(bodies));
+  assert.ok(!/\+91 98998 60983/.test(bodies), 'contact number not added when skipped');
 });
