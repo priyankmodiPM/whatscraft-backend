@@ -1,5 +1,5 @@
 {
-  "_comment": "Subway 'Finals Week' scripted demo flow (see docs QSR note). Gated to SUBWAY_PHONE. Swap the placeholder cdn.whatscraft.local banner URLs for your hosted v0–v4 images. Copy/steps are data-only; edit freely. Engine: src/scriptedFlow.js.",
+  "_comment": "Subway 'Finals Week' scripted demo flow (see docs QSR note). Gated to SUBWAY_PHONE. Swap the placeholder banner URLs for your hosted v0–v4 images. Copy/steps are data-only; edit freely. Engine: src/scriptedFlow.js. PROPOSED REVISION: first-20/10%-off step removed; copy made informal + bulleted; in-progress 'Generated using Adobe Express' lines added before generated banners.",
   "phone": "918328145692",
   "start": "kickoff",
   "steps": {
@@ -8,7 +8,7 @@
         {
           "type": "image",
           "link": "https://s7ap1.scene7.com/is/image/varunAEM/Subway-v1?cache=off",
-          "caption": "Amit — Finals Week is live 🏏 HQ's default offer: 20% off any 6-inch Sub, across all outlets, all week.\n\nHere's your store's version — ready to send as-is, or tap Edit to make it yours."
+          "caption": "Hey Amit — Finals Week is live! 🏏\n\n• HQ offer: 20% off any 6-inch Sub\n• All outlets, all week\n\nHere's your store's version 👇\nSend it as-is, or tap Edit to make it yours."
         },
         {
           "type": "buttons",
@@ -36,7 +36,7 @@
       "onEnter": [
         {
           "type": "text",
-          "text": "Sent as-is ✅ Finals Week offer queued to your opted-in lists (Office 400 · College 400) from Subway's official number. 🏏"
+          "text": "Sent as-is ✅\n\n• Queued to your opted-in lists: Office (400) · College (400)\n• Going out from Subway's official number 🏏"
         }
       ]
     },
@@ -45,7 +45,7 @@
       "onEnter": [
         {
           "type": "text",
-          "text": "Sure — tell me what you'd like to change, or describe the offer you want."
+          "text": "Sure — tell me what to change, or just describe the offer you want. 👇"
         }
       ],
       "await": { "kind": "any", "next": "combo" }
@@ -53,7 +53,9 @@
 
     "combo": {
       "onEnter": [
-        { "type": "text", "text": "Good call — combos do better during Finals Week. Building it now… ⏳" },
+        { "type": "text", "text": "Good call — combos convert better during Finals Week. 👍" },
+        { "type": "text", "text": "🎨 Designing your combo banner…" },
+        { "type": "text", "text": "✨ Generated using Adobe Express" },
         {
           "type": "image",
           "link": "https://s7ap1.scene7.com/is/image/varunAEM/Subway-v2?cache=off",
@@ -61,7 +63,7 @@
         },
         {
           "type": "buttons",
-          "body": "For pricing: Sub + Cookie + Drink separately run ₹350. I'd suggest ₹250 for the combo — nearby outlets running this combo this week are converting best at that price point, better than combos priced higher. Want to go with ₹250?",
+          "body": "Quick pricing thought 💰\n\n• Bought separately: ₹350\n• Suggested combo price: ₹250\n\nWhy ₹250? Nearby outlets running this combo are converting best at that price this week.\n\nGo with ₹250?",
           "options": ["✅ Yes, ₹250", "✏️ Different price"]
         }
       ],
@@ -85,7 +87,7 @@
       "onEnter": [
         {
           "type": "buttons",
-          "body": "No problem — for this demo I'd recommend ₹250 (best-converting this week). Shall I go with it?",
+          "body": "No problem 👍 For this demo I'd still recommend ₹250 — it's the best-converting price this week. Go with it?",
           "options": ["✅ Yes, ₹250"]
         }
       ],
@@ -100,11 +102,16 @@
 
     "matchday": {
       "onEnter": [
-        { "type": "text", "text": "Done ✅ ₹350 struck through, ₹250 highlighted, cricket-ball motif added to the corner." },
+        { "type": "text", "text": "🎨 Updating the price on your banner…" },
+        { "type": "text", "text": "✨ Generated using Adobe Express" },
+        {
+          "type": "text",
+          "text": "Done ✅\n\n• ₹350 struck through, ₹250 highlighted\n• Cricket-ball motif added to the corner"
+        },
         {
           "type": "image",
           "link": "https://s7ap1.scene7.com/is/image/varunAEM/Subway-v3?cache=off",
-          "caption": "Here's your preview — how's this looking?"
+          "caption": "Here's your preview — how's it looking?"
         }
       ],
       "await": { "kind": "any", "next": "gluten_free" }
@@ -114,7 +121,7 @@
       "onEnter": [
         {
           "type": "buttons",
-          "body": "I can't label the combo gluten-free as it stands — the regular sub roll has wheat, so that'd be a false claim and an allergen-compliance risk. Three accurate ways to still win the gym crowd:\n\n🥖 Swap to GF base — rebuild the sub on our approved gluten-free bread, then the tag is genuinely accurate.\n🥗 Feature Veggie Delite — highlight the salad instead, tagged \"Lighter option\".\n💪 High-Protein badge — keep the sub, add \"High Protein • Loaded with Veggies\", no bread claim.\n\nWhich one?",
+          "body": "Heads up — I can't tag this gluten-free as it stands. ⚠️\nThe regular sub roll has wheat, so that'd be a false claim + an allergen-compliance risk.\n\nThree accurate ways to still win the gym crowd:\n\n🥖 Swap to GF base — rebuild on our approved gluten-free bread, so the tag is genuinely accurate\n🥗 Feature Veggie Delite — spotlight the salad, tagged \"Lighter option\"\n💪 High-Protein badge — keep the sub, add \"High Protein • Loaded with Veggies\" (no bread claim)\n\nWhich one?",
           "options": ["🥖 Swap to GF base", "🥗 Veggie Delite", "💪 High-Protein"]
         }
       ],
@@ -137,33 +144,20 @@
 
     "gf_swapped": {
       "onEnter": [
+        { "type": "text", "text": "🎨 Rebuilding the sub on the GF base…" },
+        { "type": "text", "text": "✨ Generated using Adobe Express" },
         {
           "type": "text",
-          "text": "On it ✅ Sub rebuilt on the gluten-free base — heads up though, the cookie in this combo still has gluten, so I can't tag the whole combo gluten-free. Tag now reads \"SUB MADE ON GLUTEN-FREE BREAD\" — accurate, and still speaks to the same crowd."
+          "text": "On it ✅\n\n• Sub rebuilt on the gluten-free base\n• Heads up: the cookie still has gluten, so I can't tag the whole combo GF\n• Tag now reads \"SUB MADE ON GLUTEN-FREE BREAD\" — accurate, and still speaks to the same crowd"
         },
         {
           "type": "image",
           "link": "https://s7ap1.scene7.com/is/image/varunAEM/Subway-v4?cache=off",
           "caption": "Updated with the gluten-free base 🥖"
-        }
-      ],
-      "await": { "kind": "any", "next": "final_hook" }
-    },
-
-    "final_hook": {
-      "onEnter": [
-        {
-          "type": "text",
-          "text": "🔥 Ek strip add kar diya: \"First 20 guests: EXTRA 10% OFF — show this on WhatsApp,\" neeche compliant fine print ke saath — \"Finals Week only • dine-in & takeaway • first 20 guests only.\""
-        },
-        {
-          "type": "image",
-          "link": "https://s7ap1.scene7.com/is/image/varunAEM/Subway-v5?cache=off",
-          "caption": "Final banner ready! 🎉"
         },
         {
           "type": "buttons",
-          "body": "Banner ready hai! Kahan bhejna hai?\n📲 WhatsApp — tumhari opted-in lists (Office 400 · College 400), Subway ke official number se\n📸 Instagram — @SubwayHinjewadi pe post + ek \"Finals Week\" Story, countdown ke saath\n🔀 Dono",
+          "body": "Banner ready! 🎉 Kahan bhejein?\n\n📲 WhatsApp — opted-in lists (Office 400 · College 400), Subway ke official number se\n📸 Instagram — @SubwayNoida pe post + ek \"Finals Week\" Story with countdown\n🔀 Dono — dono jagah",
           "options": ["📲 WhatsApp", "📸 Instagram", "🔀 Dono"]
         }
       ],
@@ -177,7 +171,7 @@
         "reask": [
           {
             "type": "buttons",
-            "body": "Kahan bhejun? Tap karein — WhatsApp, Instagram, ya Dono.",
+            "body": "Kahan bhejein? Tap karein — WhatsApp, Instagram, ya Dono.",
             "options": ["📲 WhatsApp", "📸 Instagram", "🔀 Dono"]
           }
         ]
@@ -188,7 +182,7 @@
       "onEnter": [
         {
           "type": "text",
-          "text": "Ho gaya ✅ Gluten-free sub, match-day price, aur extra-20 wala hook — sab ek banner mein, kickoff ke liye ready. 🏏"
+          "text": "Ho gaya ✅\n\n• Gluten-free sub 🥖\n• Match-day price 💰\n\nSab ek banner mein, kickoff ke liye ready! 🏏"
         }
       ]
     }
