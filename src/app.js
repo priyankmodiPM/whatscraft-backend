@@ -47,6 +47,19 @@ const flow2Sessions = new Map();
 const scriptedFlows = loadScriptedFlows();
 const scriptedSessions = new Map();
 
+// handleScriptedTurn updates scriptedSessions synchronously but AWAITS its sends
+// (progress-line sleeps, IMAGE_DELIVERY_DELAY_MS) — a fast follow-up reply arriving on
+// a separate webhook request while those are still in flight would start sending its
+// own step's messages before the current step's banner finishes, so WhatsApp shows them
+// out of order. Chain each phone's turns through this so a phone's sends never overlap.
+const scriptedTurnLocks = new Map();
+function runScriptedTurnSerialized(phoneNumber, task) {
+  const prior = scriptedTurnLocks.get(phoneNumber) || Promise.resolve();
+  const run = prior.then(task, task);
+  scriptedTurnLocks.set(phoneNumber, run.catch(() => {}));
+  return run;
+}
+
 // Flow 2 (the personalised-offer flow) is gated to a single demo phone number so
 // arbitrary inbound numbers can't trigger it — everyone else is restricted to the
 // existing behaviour (Flow 1 + generic tools). Substring match, env-overridable.
@@ -559,7 +572,7 @@ app.post('/', async (req, res) => {
       // always go back to `phoneNumber` (the customer) regardless — see runScriptedSends.
       const scripted = flowForMessage(scriptedFlows, { businessPhoneNumberId, senderNumber: phoneNumber });
       if (scripted) {
-        await handleScriptedTurn(phoneNumber, scripted, userText);
+        await runScriptedTurnSerialized(phoneNumber, () => handleScriptedTurn(phoneNumber, scripted, userText));
         continue;
       }
 

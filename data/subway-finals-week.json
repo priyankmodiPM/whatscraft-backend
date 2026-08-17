@@ -55,105 +55,46 @@
       "onEnter": [
         { "type": "text", "text": "Good call — combos convert better during Finals Week. 👍" },
         { "type": "progress", "text": "🎨 Designing your combo banner…" },
-        { "type": "progress", "text": "✨ Generating with Express" },
+        { "type": "progress", "text": "✨ Generating with Adobe Express" },
         {
           "type": "image",
           "link": "https://s7ap1.scene7.com/is/image/varunAEM/Subway-v2?cache=off",
           "caption": "Chicken Tikka Sub + Cookie + Cold Drink 🥤🍪"
-        },
+        }
+      ],
+      "await": { "kind": "any", "next": "min_price" }
+    },
+
+    "min_price": {
+      "onEnter": [
         {
           "type": "buttons",
-          "body": "Quick pricing thought 💰\n\n• Bought separately: ₹350\n• Suggested combo price: ₹250\n\nWhy ₹250? Nearby outlets running this combo are converting best at that price this week.\n\nGo with ₹250?",
-          "options": ["✅ Yes, ₹250", "✏️ Different price"]
+          "body": "That price isn't allowed, unfortunately ⚠️\n\nAs per brand guidelines, the minimum price for this combo is ₹250 — going lower eats into franchise margins across outlets.\n\nWant to keep ₹250, or try a different combo?",
+          "options": ["✅ Keep ₹250", "🔄 Change combo"]
         }
       ],
       "await": {
         "kind": "buttons",
         "options": [
-          { "match": "Yes 250", "next": "matchday" },
-          { "match": "Different price", "next": "combo_reprice" }
+          { "match": "Keep 250", "next": "combo_ready" },
+          { "match": "Change combo", "next": "ask_edit" }
         ],
         "reask": [
           {
             "type": "buttons",
-            "body": "Tap ✅ Yes, ₹250 to lock the combo price, or ✏️ Different price.",
-            "options": ["✅ Yes, ₹250", "✏️ Different price"]
+            "body": "Tap ✅ Keep ₹250 to continue at ₹250, or 🔄 Change combo to try something else.",
+            "options": ["✅ Keep ₹250", "🔄 Change combo"]
           }
         ]
       }
     },
 
-    "combo_reprice": {
+    "combo_ready": {
       "onEnter": [
-        {
-          "type": "buttons",
-          "body": "No problem 👍 For this demo I'd still recommend ₹250 — it's the best-converting price this week. Go with it?",
-          "options": ["✅ Yes, ₹250"]
-        }
-      ],
-      "await": {
-        "kind": "buttons",
-        "options": [{ "match": "Yes 250", "next": "matchday" }],
-        "reask": [
-          { "type": "buttons", "body": "Tap ✅ Yes, ₹250 to continue.", "options": ["✅ Yes, ₹250"] }
-        ]
-      }
-    },
-
-    "matchday": {
-      "onEnter": [
-        { "type": "progress", "text": "🎨 Updating the price on your banner…" },
-        { "type": "progress", "text": "✨ Generating with Express" },
-        {
-          "type": "text",
-          "text": "Done ✅\n\n• ₹350 struck through, ₹250 highlighted\n• Cricket-ball motif added to the corner"
-        },
         {
           "type": "image",
           "link": "https://s7ap1.scene7.com/is/image/varunAEM/Subway-v3?cache=off",
           "caption": "Here's your preview — how's it looking?"
-        }
-      ],
-      "await": { "kind": "any", "next": "gluten_free" }
-    },
-
-    "gluten_free": {
-      "onEnter": [
-        {
-          "type": "buttons",
-          "body": "Heads up — I can't tag this gluten-free as it stands. ⚠️\nThe regular sub roll has wheat, so that'd be a false claim + an allergen-compliance risk.\n\nBut there are a few accurate ways to still win the gym crowd — which one?",
-          "options": ["🥖 Swap to GF base", "🥗 Veggie Delite", "💪 High-Protein"]
-        }
-      ],
-      "await": {
-        "kind": "buttons",
-        "options": [
-          { "match": "Swap to GF base", "next": "gf_swapped" },
-          { "match": "Veggie Delite", "next": "gf_swapped" },
-          { "match": "High-Protein", "next": "gf_swapped" }
-        ],
-        "reask": [
-          {
-            "type": "buttons",
-            "body": "Tap one of the accurate options — Swap to GF base, Veggie Delite, or High-Protein.",
-            "options": ["🥖 Swap to GF base", "🥗 Veggie Delite", "💪 High-Protein"]
-          }
-        ]
-      }
-    },
-
-    "gf_swapped": {
-      "onEnter": [
-        { "type": "progress", "text": "🎨 Rebuilding the sub on the GF base…" },
-        { "type": "progress", "text": "✨ Generating with Express" },
-        {
-          "type": "text",
-          "text": "On it ✅\n\n• Sub rebuilt on the gluten-free base\n• Heads up: the cookie still has gluten, so I can't tag the whole combo GF\n• Tag now reads \"SUB MADE ON GLUTEN-FREE BREAD\" — accurate, and still speaks to the same crowd"
-        },
-        {
-          "type": "image",
-          "link": "https://s7ap1.scene7.com/is/image/varunAEM/Subway-v4?cache=off",
-          "caption": "Updated with the gluten-free base 🥖"
         },
         {
           "type": "buttons",
