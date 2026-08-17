@@ -169,13 +169,13 @@ test('Subway golden path runs kickoff → sent and emits all three banners', () 
   const { session, emitted } = walk(flow, [
     '✏️ Edit',
     'chicken tikka sub combo, sub + cookie + cold drink',
-    'can we do it for ₹180',
-    '✅ Keep ₹250',
+    'add a gluten free tag',
+    '🥖 Swap to GF base',
     '🔀 Dono',
   ]);
   assert.strictEqual(session, null, 'flow ends after channel pick');
   const images = emitted.filter((m) => m.type === 'image').map((m) => m.link);
-  assert.strictEqual(images.length, 3, 'v1–v3 all delivered');
+  assert.strictEqual(images.length, 3, 'v1, v3, v4 all delivered');
   assert.ok(images.every((l) => /^https?:\/\//.test(l)), 'every banner has a real URL');
 });
 
@@ -186,15 +186,15 @@ test('Subway "Send as-is" is a clean one-step exit', () => {
   assert.ok(emitted.some((m) => m.type === 'text' && /Sent as-is/.test(m.text)));
 });
 
-test('Subway min-price step re-asks on an unrecognised reply', () => {
+test('Subway gluten-free step re-asks on an unrecognised reply', () => {
   const flow = flowForPhone(loadScriptedFlows(), '918328145692');
   let { session, sends } = scriptedFlow.start(flow);
   ({ session, sends } = scriptedFlow.advance(flow, session, '✏️ Edit'));
   ({ session, sends } = scriptedFlow.advance(flow, session, 'combo please'));
-  ({ session, sends } = scriptedFlow.advance(flow, session, 'can we do it for ₹180'));
+  ({ session, sends } = scriptedFlow.advance(flow, session, 'add a gluten free tag'));
   const before = session.stepKey;
   ({ session, sends } = scriptedFlow.advance(flow, session, 'purple monkey dishwasher'));
-  assert.strictEqual(session.stepKey, before, 'stays on the min-price step');
+  assert.strictEqual(session.stepKey, before, 'stays on the gluten-free step');
   assert.ok(sends.some((m) => m.type === 'buttons'), 're-asks with buttons');
 });
 
