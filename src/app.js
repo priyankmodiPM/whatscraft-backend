@@ -135,9 +135,20 @@ function sendImage(to, link, caption, sender) {
   return whatsappPost({ messaging_product: 'whatsapp', to, type: 'image', image }, sender);
 }
 
+// Send a pre-approved WhatsApp message template (e.g. the Kia offers carousel,
+// image_carousel_promo3). The flow JSON carries the whole template spec — name,
+// language, body params and carousel cards — so this helper just addresses it to the
+// recipient. Templates must be sent from the WhatsApp account they're attached to, so
+// pass that flow's sender. Quick-reply taps on the template come back as
+// message.button.payload (see the webhook handler), not interactive.button_reply.
+function sendTemplate(to, template, sender) {
+  return whatsappPost({ messaging_product: 'whatsapp', to, type: 'template', template }, sender);
+}
+
 // WhatsApp reply-button messages support at most 3 buttons, and an optional media
 // header — pass headerImageLink to render an image in the SAME message as the buttons
-// (used by the Kia offer picker so the 3-offer banner and its buttons arrive together).
+// (a banner + its buttons arrive together). The Kia offer picker now uses the
+// image_carousel_promo3 carousel template instead — see sendTemplate.
 function sendButtons(to, bodyText, options, sender, headerImageLink) {
   const interactive = {
     type: 'button',
@@ -236,6 +247,15 @@ async function runScriptedSends(phoneNumber, sends, sender) {
       // so the banner and its buttons land as a single message.
       await sendQuickReplies(phoneNumber, msg.body, msg.options, sender, msg.image);
       appendHistory(phoneNumber, 'assistant', msg.body);
+    } else if (msg.type === 'template') {
+      // A pre-approved message template (e.g. the Kia offers carousel). The full
+      // template spec lives in the flow JSON; msg.historyText is the plain-text line
+      // kept in conversation history (the template body isn't otherwise readable back).
+      // After the media-carousel we pause like an image so a following message can't
+      // land before it renders.
+      await sendTemplate(phoneNumber, msg.template, sender);
+      if (msg.historyText) appendHistory(phoneNumber, 'assistant', msg.historyText);
+      await sleep(IMAGE_DELIVERY_DELAY_MS);
     }
   }
 }
@@ -545,8 +565,8 @@ app.post('/', async (req, res) => {
 
     // The WhatsApp Business ACCOUNT the customer TEXTED — Meta's stable phone_number_id
     // for the receiving number. This is what selects a scripted flow, not who sent it:
-    // Subway and Kia each own a distinct business account (1174719859057684 → Subway,
-    // 1200280473175726 → Kia), so a customer texting Kia's account always gets the Kia
+    // Subway and Kia each own a distinct business account (1174719859057684 → Kia,
+    // 1200280473175726 → Subway), so a customer texting Kia's account always gets the Kia
     // script regardless of the customer's own phone.
     const businessPhoneNumberId = value?.metadata?.phone_number_id;
 
@@ -556,7 +576,14 @@ app.post('/', async (req, res) => {
       if (message.image) console.log('[webhook] message.image:', JSON.stringify(message.image));
 
       const interactiveReply = message?.interactive?.button_reply || message?.interactive?.list_reply;
-      const userText = message?.text?.body || (interactiveReply && messageTextForInteractiveReply(interactiveReply));
+      // Quick-reply taps on a message TEMPLATE (e.g. the Kia offers carousel) arrive as
+      // message.button = { payload, text } — a different shape from interactive replies.
+      // The payload (offer_low_emi / offer_insurance_off) is what the scripted gate matches.
+      const templateButtonPayload = message?.button?.payload;
+      const userText =
+        message?.text?.body ||
+        (interactiveReply && messageTextForInteractiveReply(interactiveReply)) ||
+        templateButtonPayload;
       if (!userText) continue;
 
       const phoneNumber = message.from;
