@@ -1,14 +1,18 @@
 {
-  "_comment": "Subway 'Finals Week' scripted demo flow (see docs QSR note). Gated to SUBWAY_PHONE. Swap the placeholder banner URLs for your hosted v0–v4 images. Copy/steps are data-only; edit freely. Engine: src/scriptedFlow.js. PROPOSED REVISION: first-20/10%-off step removed; copy made informal + bulleted; in-progress 'Generating with Express' lines (type: progress) added before generated banners, with a real GEN_STEP_DELAY_MS pause between them.",
+  "_comment": "Subway 'World Cup Week' scripted demo flow. Gated to SUBWAY_PHONE. Copy/steps are data-only; edit freely. Engine: src/scriptedFlow.js. Story: kickoff banner -> product swap -> discount pushback (40% asked, 20% HQ cap held) -> first-20-customers free-cookie special offer -> channel picker. Each banner's own message is addressed to the DEALER and sent BEFORE the image; the image's caption is the ready-to-forward CUSTOMER-facing copy, so dealer context and customer copy never land in the same bubble.",
   "phone": "918328145692",
   "start": "kickoff",
   "steps": {
     "kickoff": {
       "onEnter": [
         {
+          "type": "text",
+          "text": "Hey Amit — World Cup Week is live! 🏏\n\n• HQ offer: 20% off any 6-inch Sub\n• All outlets, today only\n\nHere's your store's version 👇\nSend it as-is, or tap Edit to make it yours."
+        },
+        {
           "type": "image",
-          "link": "https://s7ap1.scene7.com/is/image/varunAEM/Subway-v1?cache=off",
-          "caption": "Hey Amit — Finals Week is live! 🏏\n\n• HQ offer: 20% off any 6-inch Sub\n• All outlets, all week\n\nHere's your store's version 👇\nSend it as-is, or tap Edit to make it yours."
+          "link": "https://s7ap1.scene7.com/is/image/varunAEM/subway%2Dva",
+          "caption": "🏏 World Cup Week at Subway! Get 20% OFF on any 6-inch Sub — today only. Come grab your sub before kickoff! 🥪"
         },
         {
           "type": "buttons",
@@ -48,64 +52,46 @@
           "text": "Sure — tell me what to change, or just describe the offer you want. 👇"
         }
       ],
-      "await": { "kind": "any", "next": "combo" }
+      "await": { "kind": "any", "next": "product_change" }
     },
 
-    "combo": {
+    "product_change": {
       "onEnter": [
-        { "type": "text", "text": "Good call — combos convert better during Finals Week. 👍" },
-        { "type": "progress", "text": "🎨 Designing your combo banner…" },
+        { "type": "text", "text": "Got it — swapping the product on your banner. 👍" },
+        { "type": "progress", "text": "🎨 Updating your banner…" },
         { "type": "progress", "text": "✨ Generating with Adobe Express" },
         {
           "type": "image",
-          "link": "https://s7ap1.scene7.com/is/image/varunAEM/Subway-v3?cache=off",
-          "caption": "Chicken Tikka Sub + Cookie + Cold Drink combo — ₹250 (was ₹350) 🥤🍪"
+          "link": "https://s7ap1.scene7.com/is/image/varunAEM/subway%2Dvb",
+          "caption": "🏏 World Cup Week Special!\n\n🥪 Chicken Tikka Sub\n💰 ₹240 (MRP ₹300) — 20% OFF\n📅 Today only, at Subway\n\nGrab yours before it's gone!"
         }
       ],
-      "await": { "kind": "any", "next": "gluten_free" }
+      "await": { "kind": "any", "next": "discount_pushback" }
     },
 
-    "gluten_free": {
+    "discount_pushback": {
       "onEnter": [
-        {
-          "type": "buttons",
-          "body": "Heads up — I can't tag this gluten-free as it stands. ⚠️\nThe regular sub roll has wheat, so that'd be a false claim + an allergen-compliance risk.\n\nBut there are a few accurate ways to still win the gym crowd — which one?",
-          "options": ["🥖 Swap to GF base", "🥗 Veggie Delite", "💪 High-Protein"]
-        }
-      ],
-      "await": {
-        "kind": "buttons",
-        "options": [
-          { "match": "Swap to GF base", "next": "gf_swapped" },
-          { "match": "Veggie Delite", "next": "gf_swapped" },
-          { "match": "High-Protein", "next": "gf_swapped" }
-        ],
-        "reask": [
-          {
-            "type": "buttons",
-            "body": "Tap one of the accurate options — Swap to GF base, Veggie Delite, or High-Protein.",
-            "options": ["🥖 Swap to GF base", "🥗 Veggie Delite", "💪 High-Protein"]
-          }
-        ]
-      }
-    },
-
-    "gf_swapped": {
-      "onEnter": [
-        { "type": "progress", "text": "🎨 Rebuilding the sub on the GF base…" },
-        { "type": "progress", "text": "✨ Generating with Adobe Express" },
         {
           "type": "text",
-          "text": "On it ✅\n\n• Sub rebuilt on the gluten-free base\n• Heads up: the cookie still has gluten, so I can't tag the whole combo GF\n• Tag now reads \"SUB MADE ON GLUTEN-FREE BREAD\" — accurate, and still speaks to the same crowd"
-        },
+          "text": "Can't do 40%, unfortunately ⚠️\n\nFor this World Cup campaign, HQ has capped the discount at 20% across the country — that's fixed, no store-level exceptions this time."
+        }
+      ],
+      "await": { "kind": "any", "next": "special_offer" }
+    },
+
+    "special_offer": {
+      "onEnter": [
+        { "type": "text", "text": "Love that — a first-20 hook drives urgency really well. 👍" },
+        { "type": "progress", "text": "🎨 Adding the free-cookie call-out…" },
+        { "type": "progress", "text": "✨ Generating with Adobe Express" },
         {
           "type": "image",
-          "link": "https://s7ap1.scene7.com/is/image/varunAEM/Subway-v4?cache=off",
-          "caption": "Updated with the gluten-free base 🥖"
+          "link": "https://s7ap1.scene7.com/is/image/varunAEM/subway%2Dvc",
+          "caption": "🏏 World Cup Week just got sweeter!\n\n🥪 Chicken Tikka Sub — ₹240 (MRP ₹300), 20% OFF\n🍪 FREE cookie for the first 20 customers\n📅 Today only, at Subway\n\nHurry in!"
         },
         {
           "type": "buttons",
-          "body": "Banner ready! 🎉 Kahan bhejein?\n\n📲 WhatsApp — opted-in lists (Office 400 · College 400), Subway ke official number se\n📸 Instagram — @SubwayNoida pe post + ek \"Finals Week\" Story with countdown\n🔀 Dono — dono jagah",
+          "body": "Banner ready! 🎉 Kahan bhejein?\n\n📲 WhatsApp — opted-in lists (Office 400 · College 400), Subway ke official number se\n📸 Instagram — @SubwayNoida pe post + ek \"World Cup Week\" Story with countdown\n🔀 Dono — dono jagah",
           "options": ["📲 WhatsApp", "📸 Instagram", "🔀 Dono"]
         }
       ],
@@ -130,7 +116,7 @@
       "onEnter": [
         {
           "type": "text",
-          "text": "Ho gaya ✅\n\n• Gluten-free sub 🥖\n• Match-day price 💰\n\nSab ek banner mein, kickoff ke liye ready! 🏏"
+          "text": "Ho gaya ✅\n\n• Product swapped 🔄\n• 20% World Cup discount held firm 💪\n• Free cookie for first 20 customers 🍪\n\nSab ek banner mein, kickoff ke liye ready! 🏏"
         }
       ]
     }
