@@ -19,7 +19,7 @@ PHONE="${PHONE:-${SUBWAY_PHONE:-919899860983}}"
 PAUSE="${PAUSE:-10}"
 # Routing is by the RECEIVING business account (metadata.phone_number_id). ACCOUNT_ID
 # defaults to the Subway business account id; sender (PHONE) is arbitrary.
-ACCOUNT_ID="${ACCOUNT_ID:-${WHATSAPP_PHONE_NUMBER_ID:-1174719859057684}}"
+ACCOUNT_ID="${ACCOUNT_ID:-${WHATSAPP_PHONE_NUMBER_ID:-1200280473175726}}"
 
 # Send a free-text WhatsApp message.
 send() {

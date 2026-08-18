@@ -17,10 +17,10 @@ set -euo pipefail
 
 BASE_URL="${BASE_URL:-http://localhost:3000}"
 PHONE="${PHONE:-${KIA_PHONE:-919899860983}}"
-PAUSE="${PAUSE:-3}"
+PAUSE="${PAUSE:-10}"
 # Routing is by the RECEIVING business account (metadata.phone_number_id). ACCOUNT_ID
 # defaults to the Kia business account id; sender (PHONE) is arbitrary.
-ACCOUNT_ID="${ACCOUNT_ID:-${KIA_WHATSAPP_PHONE_NUMBER_ID:-1200280473175726}}"
+ACCOUNT_ID="${ACCOUNT_ID:-${KIA_WHATSAPP_PHONE_NUMBER_ID:-1174719859057684}}"
 
 # Send a free-text WhatsApp message.
 send() {
@@ -46,6 +46,20 @@ JSON
   echo
 }
 
+# Tap a quick-reply button on a message TEMPLATE (e.g. the offers carousel). WhatsApp
+# delivers this as message.button = { payload, text } — a different shape from an
+# interactive button_reply. Arg = the button payload (e.g. offer_insurance_off).
+tap_payload() {
+  echo ">>> [tap template button] $1"
+  curl -s -X POST "$BASE_URL/" -H 'Content-Type: application/json' -d "$(cat <<JSON
+{"object":"whatsapp_business_account","entry":[{"changes":[{"value":{"metadata":{"phone_number_id":"$ACCOUNT_ID"},"messages":[
+{"from":"$PHONE","type":"button","button":{"payload":"$1","text":"$1"}}]}}]}]}
+JSON
+)" >/dev/null
+  echo "    (200 ack — check server logs)"
+  echo
+}
+
 echo "=== Kia 'Seltos follow-up' flow → $BASE_URL  (sender: $PHONE) ==="
 echo "    (server must be running with KIA_PHONE=$PHONE)"
 echo
@@ -54,14 +68,16 @@ echo
 send "hi"
 sleep "$PAUSE"
 
-# 1) Follow up → WC pulls Apoorva's profile and shows the 3-offer banner + picker in one
-#    message [💳 Low EMI / 0️⃣ Zero Down Payment / 🛡️ Insurance Off]
+# 1) Follow up → WC pulls Apoorva's profile and sends the offers CAROUSEL
+#    (image_carousel_promo3 template — cards with quick-reply buttons
+#    offer_low_emi / offer_insurance_off)
 tap "✅ Yes, follow up"
 sleep "$PAUSE"
 
-# 2) Pick an offer → WC asks which insurance plan to feature
+# 2) Pick an offer (tap a carousel quick-reply → arrives as message.button.payload) →
+#    WC asks which insurance plan to feature
 #    [3-Yr Comprehensive / Zero Dep + RSA / Engine Protect]
-tap "🛡️ Insurance Off"
+tap_payload "offer_insurance_off"
 sleep "$PAUSE"
 
 # 3) Pick a plan → WC asks whether to add the salesman's contact [Yes, add it / No, skip]

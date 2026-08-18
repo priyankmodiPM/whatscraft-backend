@@ -211,8 +211,8 @@ test('Kia golden path runs kickoff → localized banner with contact', () => {
   const bodies = emitted.map((m) => m.text || m.body || m.caption || '').join('\n');
   assert.ok(/\+91 98998 60983/.test(bodies), 'confirms adding the known contact number');
   assert.ok(
-    emitted.some((m) => m.type === 'buttons' && m.image && m.options.includes('🛡️ Insurance Off')),
-    'offer picker carries the merged image in the same message as its buttons'
+    emitted.some((m) => m.type === 'template' && m.template?.name === 'image_carousel_promo3'),
+    'offer picker is the image_carousel_promo3 carousel template'
   );
   assert.ok(
     emitted.some((m) => m.type === 'buttons' && m.options.includes('3-Yr Comprehensive')),
