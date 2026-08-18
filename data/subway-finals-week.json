@@ -1,5 +1,5 @@
 {
-  "_comment": "Subway 'World Cup Week' scripted demo flow. Gated to SUBWAY_PHONE. Copy/steps are data-only; edit freely. Engine: src/scriptedFlow.js. Story: kickoff banner -> product swap -> discount pushback (40% asked, 20% HQ cap held) -> first-20-customers free-cookie special offer -> channel picker. Each banner's own message is addressed to the DEALER and sent BEFORE the image; the image's caption is the ready-to-forward CUSTOMER-facing copy, so dealer context and customer copy never land in the same bubble.",
+  "_comment": "Subway 'World Cup Week' scripted demo flow. Gated to SUBWAY_PHONE. Copy/steps are data-only; edit freely. Engine: src/scriptedFlow.js. Story: kickoff banner -> product swap to Chicken Tikka (clearing excess stock) -> discount pushback (50% asked, 30% HQ cap held, with a keep-30%/change-offer choice) -> updated banner -> channel picker. Each banner's own message is addressed to the DEALER and sent BEFORE the image; the image's caption is the ready-to-forward CUSTOMER-facing copy, so dealer context and customer copy never land in the same bubble.",
   "phone": "918328145692",
   "start": "kickoff",
   "steps": {
@@ -11,7 +11,7 @@
         },
         {
           "type": "image",
-          "link": "https://s7ap1.scene7.com/is/image/varunAEM/subway%2Dva",
+          "link": "https://s7ap1.scene7.com/is/image/varunAEM/subway-v1a",
           "caption": "🏏 World Cup Week at Subway! Get 20% OFF on any 6-inch Sub — today only. Come grab your sub before kickoff! 🥪"
         },
         {
@@ -40,7 +40,7 @@
       "onEnter": [
         {
           "type": "text",
-          "text": "Sent as-is ✅\n\n• Queued to your opted-in lists: Office (400) · College (400)\n• Going out from Subway's official number 🏏"
+          "text": "Sent as-is ✅\n\n• Queued to your opted-in lists: Office (400) · College (400)\n• Going out from Subway Noida 135's official number 🏏"
         }
       ]
     },
@@ -57,13 +57,13 @@
 
     "product_change": {
       "onEnter": [
-        { "type": "text", "text": "Got it — swapping the product on your banner. 👍" },
+        { "type": "text", "text": "Got it — chicken tikka it is, good call clearing that excess stock. 👍" },
         { "type": "progress", "text": "🎨 Updating your banner…" },
         { "type": "progress", "text": "✨ Generating with Adobe Express" },
         {
           "type": "image",
-          "link": "https://s7ap1.scene7.com/is/image/varunAEM/subway%2Dvb",
-          "caption": "🏏 World Cup Week Special!\n\n🥪 Chicken Tikka Sub\n💰 ₹240 (MRP ₹300) — 20% OFF\n📅 Today only, at Subway\n\nGrab yours before it's gone!"
+          "link": "https://s7ap1.scene7.com/is/image/varunAEM/subway-v2b",
+          "caption": "🏏 World Cup Week Special!\n\n🥪 Chicken Tikka Sub\n💰 ₹240 (MRP ₹300) — 20% OFF\n📅 Today only, at Subway Noida Sector 135\n\nGrab yours before it's gone!"
         }
       ],
       "await": { "kind": "any", "next": "discount_pushback" }
@@ -72,27 +72,40 @@
     "discount_pushback": {
       "onEnter": [
         {
-          "type": "text",
-          "text": "Can't do 40%, unfortunately ⚠️\n\nFor this World Cup campaign, HQ has capped the discount at 20% across the country — that's fixed, no store-level exceptions this time."
+          "type": "buttons",
+          "body": "Whoa, 50% is too steep for this one ⚠️\n\nMaximum discount allowed on this offer is 30% — HQ cap, no exceptions.\n\nWant to go with 30%, or change the offer altogether?",
+          "options": ["✅ Use 30%", "🔄 Change offer"]
         }
       ],
-      "await": { "kind": "any", "next": "special_offer" }
+      "await": {
+        "kind": "buttons",
+        "options": [
+          { "match": "Use 30%", "next": "final_offer" },
+          { "match": "Change offer", "next": "ask_edit" }
+        ],
+        "reask": [
+          {
+            "type": "buttons",
+            "body": "Tap ✅ Use 30% to lock the discount, or 🔄 Change offer to try something else.",
+            "options": ["✅ Use 30%", "🔄 Change offer"]
+          }
+        ]
+      }
     },
 
-    "special_offer": {
+    "final_offer": {
       "onEnter": [
-        { "type": "text", "text": "Love that — a first-20 hook drives urgency really well. 👍" },
-        { "type": "progress", "text": "🎨 Adding the free-cookie call-out…" },
+        { "type": "progress", "text": "🎨 Updating the discount on your banner…" },
         { "type": "progress", "text": "✨ Generating with Adobe Express" },
         {
           "type": "image",
-          "link": "https://s7ap1.scene7.com/is/image/varunAEM/subway%2Dvc",
-          "caption": "🏏 World Cup Week just got sweeter!\n\n🥪 Chicken Tikka Sub — ₹240 (MRP ₹300), 20% OFF\n🍪 FREE cookie for the first 20 customers\n📅 Today only, at Subway\n\nHurry in!"
+          "link": "https://s7ap1.scene7.com/is/image/varunAEM/subway-v3c",
+          "caption": "🏏 World Cup Week Special!\n\n🥪 Chicken Tikka Sub\n💰 ₹210 (MRP ₹300) — 30% OFF\n📅 Today only, at Subway Noida Sector 135\n\nGrab yours before it's gone!"
         },
         {
           "type": "buttons",
-          "body": "Banner ready! 🎉 Kahan bhejein?\n\n📲 WhatsApp — opted-in lists (Office 400 · College 400), Subway ke official number se\n📸 Instagram — @SubwayNoida pe post + ek \"World Cup Week\" Story with countdown\n🔀 Dono — dono jagah",
-          "options": ["📲 WhatsApp", "📸 Instagram", "🔀 Dono"]
+          "body": "Banner ready! 🎉 Where should this go?\n\n📲 WhatsApp — opted-in lists (Office 400 · College 400), from Subway Noida 135's official number\n📸 Instagram — post on @SubwayNoida + a \"World Cup Week\" Story with countdown\n🔀 Both — send to both",
+          "options": ["📲 WhatsApp", "📸 Instagram", "🔀 Both"]
         }
       ],
       "await": {
@@ -100,13 +113,13 @@
         "options": [
           { "match": "WhatsApp", "next": "sent" },
           { "match": "Instagram", "next": "sent" },
-          { "match": "Dono", "next": "sent" }
+          { "match": "Both", "next": "sent" }
         ],
         "reask": [
           {
             "type": "buttons",
-            "body": "Kahan bhejein? Tap karein — WhatsApp, Instagram, ya Dono.",
-            "options": ["📲 WhatsApp", "📸 Instagram", "🔀 Dono"]
+            "body": "Where should this go? Tap WhatsApp, Instagram, or Both.",
+            "options": ["📲 WhatsApp", "📸 Instagram", "🔀 Both"]
           }
         ]
       }
@@ -116,7 +129,7 @@
       "onEnter": [
         {
           "type": "text",
-          "text": "Ho gaya ✅\n\n• Product swapped 🔄\n• 20% World Cup discount held firm 💪\n• Free cookie for first 20 customers 🍪\n\nSab ek banner mein, kickoff ke liye ready! 🏏"
+          "text": "Done ✅\n\n• Product swapped to Chicken Tikka 🔄\n• Discount locked at 30% 💪\n\nBanner ready to go out — kickoff ke liye ready! 🏏"
         }
       ]
     }
