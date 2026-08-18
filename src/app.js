@@ -277,11 +277,20 @@ async function runScriptedSends(phoneNumber, sends, sender) {
   }
 }
 
+// A bare greeting ("hi"/"hello"/"hey", optionally repeated or with punctuation) that
+// restarts a scripted flow from scratch rather than being fed to the current step's gate.
+function isRestartGreeting(text) {
+  return /^\s*(hi+|hello+|hey+)[\s!.,]*$/i.test(text || '');
+}
+
 // Handle one inbound message for a scripted demo phone. Starts the flow if there's no
 // active session, otherwise advances it. Fully deterministic — no LLM call. Each flow
 // may carry its own WhatsApp sender account (flow.__sender) — e.g. Kia sends from a
 // separate business account; Subway/others fall back to the default account.
 async function handleScriptedTurn(phoneNumber, flow, userText) {
+  // Kia: a "hi" always starts over — drop any in-progress session so we kick off fresh
+  // instead of handing the greeting to the active step's gate.
+  if (flow.__key === 'kia' && isRestartGreeting(userText)) scriptedSessions.delete(phoneNumber);
   const active = scriptedSessions.get(phoneNumber);
   const { session, sends } = active
     ? scriptedFlow.advance(flow, active, userText)
