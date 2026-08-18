@@ -168,14 +168,14 @@ test('Subway golden path runs kickoff → sent and emits all three banners', () 
   const flow = flowForPhone(loadScriptedFlows(), '918328145692');
   const { session, emitted } = walk(flow, [
     '✏️ Edit',
-    'chicken tikka sub combo, sub + cookie + cold drink',
-    'add a gluten free tag',
-    '🥖 Swap to GF base',
+    'change the product please',
+    'can you do 40% off instead',
+    'free cookie for the first 20 customers who avail the offer',
     '🔀 Dono',
   ]);
   assert.strictEqual(session, null, 'flow ends after channel pick');
   const images = emitted.filter((m) => m.type === 'image').map((m) => m.link);
-  assert.strictEqual(images.length, 3, 'v1, v3, v4 all delivered');
+  assert.strictEqual(images.length, 3, 'va, vb, vc all delivered');
   assert.ok(images.every((l) => /^https?:\/\//.test(l)), 'every banner has a real URL');
 });
 
@@ -186,15 +186,16 @@ test('Subway "Send as-is" is a clean one-step exit', () => {
   assert.ok(emitted.some((m) => m.type === 'text' && /Sent as-is/.test(m.text)));
 });
 
-test('Subway gluten-free step re-asks on an unrecognised reply', () => {
+test('Subway channel-picker step re-asks on an unrecognised reply', () => {
   const flow = flowForPhone(loadScriptedFlows(), '918328145692');
   let { session, sends } = scriptedFlow.start(flow);
   ({ session, sends } = scriptedFlow.advance(flow, session, '✏️ Edit'));
-  ({ session, sends } = scriptedFlow.advance(flow, session, 'combo please'));
-  ({ session, sends } = scriptedFlow.advance(flow, session, 'add a gluten free tag'));
+  ({ session, sends } = scriptedFlow.advance(flow, session, 'change the product please'));
+  ({ session, sends } = scriptedFlow.advance(flow, session, 'can you do 40% off instead'));
+  ({ session, sends } = scriptedFlow.advance(flow, session, 'free cookie for the first 20 customers'));
   const before = session.stepKey;
   ({ session, sends } = scriptedFlow.advance(flow, session, 'purple monkey dishwasher'));
-  assert.strictEqual(session.stepKey, before, 'stays on the gluten-free step');
+  assert.strictEqual(session.stepKey, before, 'stays on the channel-picker step');
   assert.ok(sends.some((m) => m.type === 'buttons'), 're-asks with buttons');
 });
 
