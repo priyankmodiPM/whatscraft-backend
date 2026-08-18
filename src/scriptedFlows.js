@@ -79,6 +79,7 @@ function loadScriptedFlows() {
     try {
       const flow = loadFlow(filePath);
       const phone = String(process.env[def.phoneEnv] || routing[def.key] || flow.phone || def.default);
+      flow.__key = def.key; // stable flow id (e.g. 'kia') for flow-specific behaviour at runtime
       flow.__sender = resolveSender(def); // which WhatsApp account this flow sends from (null = default)
       // The business account this flow OWNS = its sender's phone-number-id, or the default
       // account's id when the flow has none. Inbound messages are routed to a flow by the
