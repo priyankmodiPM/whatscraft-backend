@@ -253,9 +253,26 @@ async function runScriptedSends(phoneNumber, sends, sender) {
       // kept in conversation history (the template body isn't otherwise readable back).
       // After the media-carousel we pause like an image so a following message can't
       // land before it renders.
-      await sendTemplate(phoneNumber, msg.template, sender);
-      if (msg.historyText) appendHistory(phoneNumber, 'assistant', msg.historyText);
-      await sleep(IMAGE_DELIVERY_DELAY_MS);
+      //
+      // A template send can fail for reasons outside our control (template edited/paused,
+      // parameter-format drift, a stale server still holding an old template spec). If it
+      // does, we must NOT drop the step's offers and silently sit awaiting input — the
+      // conversation would dead-end. So on failure we fall back to msg.fallback (a normal
+      // interactive `buttons` picker) in the SAME turn, whose option titles the await gate
+      // also matches. Offers therefore always arrive right after the profile message,
+      // whether or not the template itself goes through.
+      try {
+        await sendTemplate(phoneNumber, msg.template, sender);
+        if (msg.historyText) appendHistory(phoneNumber, 'assistant', msg.historyText);
+        await sleep(IMAGE_DELIVERY_DELAY_MS);
+      } catch (err) {
+        console.error(`[scripted] template send failed — falling back to buttons: ${err.message}`);
+        const fb = msg.fallback;
+        if (fb) {
+          await sendQuickReplies(phoneNumber, fb.body, fb.options, sender, fb.image);
+          appendHistory(phoneNumber, 'assistant', fb.body);
+        }
+      }
     }
   }
 }

@@ -39,6 +39,13 @@
           "_comment": "The available offers are shown as the image_carousel_promo3 message template (a WhatsApp carousel). Its quick-reply buttons come back as message.button.payload — offer_low_emi / offer_insurance_off — which the await gate below matches. Executed by runScriptedSends → sendTemplate in src/app.js; must send from the KIA_WHATSAPP account the template is attached to (1174719859057684).",
           "type": "template",
           "historyText": "Here are the offers that'd work for her 👇 Which one should I run with?",
+          "fallback": {
+            "_comment": "Sent instead of the carousel if the template send fails, so the offers still appear in the SAME turn (no reply needed). Option titles are matched by this step's await gate (Low EMI / Insurance Off / Zero Down Payment).",
+            "type": "buttons",
+            "image": "https://s7ap1.scene7.com/is/image/varunAEM/kia-offers-merged?cache=off",
+            "body": "Here are 3 offers that'd work for her 👇\nWhich one should I run with?",
+            "options": ["💳 Low EMI", "🛡️ Insurance Off", "0️⃣ Zero Down Payment"]
+          },
           "template": {
             "name": "image_carousel_promo3",
             "language": { "code": "en_US" },
