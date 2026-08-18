@@ -11,7 +11,7 @@
         },
         {
           "type": "image",
-          "link": "https://s7ap1.scene7.com/is/image/varunAEM/subway-v1a",
+          "link": "https://s7ap1.scene7.com/is/image/varunAEM/subway-v1a?cache=off",
           "caption": "🏏 World Cup Week at Subway! Get 20% OFF on any 6-inch Sub — today only. Come grab your sub before kickoff! 🥪"
         },
         {
@@ -62,7 +62,7 @@
         { "type": "progress", "text": "✨ Generating with Adobe Express" },
         {
           "type": "image",
-          "link": "https://s7ap1.scene7.com/is/image/varunAEM/subway-v2b",
+          "link": "https://s7ap1.scene7.com/is/image/varunAEM/subway-v2b?cache=off",
           "caption": "🏏 World Cup Week Special!\n\n🥪 Chicken Tikka Sub\n💰 ₹240 (MRP ₹300) — 20% OFF\n📅 Today only, at Subway Noida Sector 135\n\nGrab yours before it's gone!"
         }
       ],
@@ -99,7 +99,7 @@
         { "type": "progress", "text": "✨ Generating with Adobe Express" },
         {
           "type": "image",
-          "link": "https://s7ap1.scene7.com/is/image/varunAEM/subway-v3c",
+          "link": "https://s7ap1.scene7.com/is/image/varunAEM/subway-v3c?cache=off",
           "caption": "🏏 World Cup Week Special!\n\n🥪 Chicken Tikka Sub\n💰 ₹210 (MRP ₹300) — 30% OFF\n📅 Today only, at Subway Noida Sector 135\n\nGrab yours before it's gone!"
         },
         {
@@ -129,7 +129,7 @@
       "onEnter": [
         {
           "type": "text",
-          "text": "Done ✅\n\n• Product swapped to Chicken Tikka 🔄\n• Discount locked at 30% 💪\n\nBanner ready to go out — kickoff ke liye ready! 🏏"
+          "text": "Done ✅\n\n• Product swapped to Chicken Tikka 🔄\n• Discount locked at 30% 💪"
         }
       ]
     }
