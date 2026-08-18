@@ -168,14 +168,14 @@ test('Subway golden path runs kickoff → sent and emits all three banners', () 
   const flow = flowForPhone(loadScriptedFlows(), '918328145692');
   const { session, emitted } = walk(flow, [
     '✏️ Edit',
-    'change the product please',
-    'can you do 40% off instead',
-    'free cookie for the first 20 customers who avail the offer',
-    '🔀 Dono',
+    'change the product to chicken tikka, I have excess stock',
+    'can we do 50% discount instead',
+    '✅ Use 30%',
+    '🔀 Both',
   ]);
   assert.strictEqual(session, null, 'flow ends after channel pick');
   const images = emitted.filter((m) => m.type === 'image').map((m) => m.link);
-  assert.strictEqual(images.length, 3, 'va, vb, vc all delivered');
+  assert.strictEqual(images.length, 3, 'v1a, v2b, v3c all delivered');
   assert.ok(images.every((l) => /^https?:\/\//.test(l)), 'every banner has a real URL');
 });
 
@@ -186,16 +186,15 @@ test('Subway "Send as-is" is a clean one-step exit', () => {
   assert.ok(emitted.some((m) => m.type === 'text' && /Sent as-is/.test(m.text)));
 });
 
-test('Subway channel-picker step re-asks on an unrecognised reply', () => {
+test('Subway discount-pushback step re-asks on an unrecognised reply', () => {
   const flow = flowForPhone(loadScriptedFlows(), '918328145692');
   let { session, sends } = scriptedFlow.start(flow);
   ({ session, sends } = scriptedFlow.advance(flow, session, '✏️ Edit'));
-  ({ session, sends } = scriptedFlow.advance(flow, session, 'change the product please'));
-  ({ session, sends } = scriptedFlow.advance(flow, session, 'can you do 40% off instead'));
-  ({ session, sends } = scriptedFlow.advance(flow, session, 'free cookie for the first 20 customers'));
+  ({ session, sends } = scriptedFlow.advance(flow, session, 'change the product to chicken tikka, I have excess stock'));
+  ({ session, sends } = scriptedFlow.advance(flow, session, 'can we do 50% discount instead'));
   const before = session.stepKey;
   ({ session, sends } = scriptedFlow.advance(flow, session, 'purple monkey dishwasher'));
-  assert.strictEqual(session.stepKey, before, 'stays on the channel-picker step');
+  assert.strictEqual(session.stepKey, before, 'stays on the discount-pushback step');
   assert.ok(sends.some((m) => m.type === 'buttons'), 're-asks with buttons');
 });
 
