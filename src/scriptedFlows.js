@@ -112,7 +112,7 @@ function flowForPhone(byPhone, number) {
 
 // Resolve the scripted flow by the WhatsApp Business ACCOUNT that received the message
 // (webhook metadata.phone_number_id), matched against each flow's __accountId. Primary
-// router: 1174719859057684 (Kia — owns the image_carousel_promo3 template) → Kia,
+// router: 1174719859057684 (Kia — owns the image_carousel_promo4 template) → Kia,
 // 1200280473175726 (default) → Subway.
 function flowForAccount(byPhone, businessPhoneNumberId) {
   if (!businessPhoneNumberId) return null;

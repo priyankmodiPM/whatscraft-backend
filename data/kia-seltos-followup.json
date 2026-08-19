@@ -1,5 +1,5 @@
 {
-  "_comment": "Kia 'Seltos follow-up' scripted demo flow (see Automotive note). Gated to KIA_PHONE. Short/informal WhatsApp copy; 'progress' messages stream a beat apart (GEN_STEP_DELAY_MS, ~2.8s) so a banner reveal feels generated. Flow: nudge -> profile (offers shown as the image_carousel_promo3 carousel TEMPLATE; its quick-reply payloads offer_low_emi/offer_insurance_off advance the flow) -> pick 1 of 3 insurance plans -> add contact -> render preview -> localize to Hindi + on-road price. Swap the Scene7 banner URLs / contact number as needed. Engine: src/scriptedFlow.js.",
+  "_comment": "Kia 'Seltos follow-up' scripted demo flow (see Automotive note). Gated to KIA_PHONE. Short/informal WhatsApp copy; 'progress' messages stream a beat apart (GEN_STEP_DELAY_MS, ~2.8s) so a banner reveal feels generated. Flow: nudge -> profile (offers shown as the image_carousel_promo4 carousel TEMPLATE; its quick-reply payloads offer_low_emi/offer_insurance_off/offer_zero_down advance the flow) -> pick 1 of 3 insurance plans -> add contact -> render preview -> localize to Hindi + on-road price. Swap the Scene7 banner URLs / contact number as needed. Engine: src/scriptedFlow.js.",
   "phone": "919899860983",
   "start": "kickoff",
   "steps": {
@@ -36,7 +36,7 @@
           "text": "Pulled up Apoorva's profile 📋\n• 📱 +91 98213 47762\n• Test-drove the Seltos HTK\n• Exchange car on file"
         },
         {
-          "_comment": "The available offers are shown as the image_carousel_promo3 message template (a WhatsApp carousel). Its quick-reply buttons come back as message.button.payload — offer_low_emi / offer_insurance_off — which the await gate below matches. Executed by runScriptedSends → sendTemplate in src/app.js; must send from the KIA_WHATSAPP account the template is attached to (1174719859057684).",
+          "_comment": "The available offers are shown as the image_carousel_promo4 message template (a WhatsApp carousel). Its quick-reply buttons come back as message.button.payload — offer_low_emi / offer_insurance_off / offer_zero_down, one per card — which the await gate below matches. Executed by runScriptedSends → sendTemplate in src/app.js; must send from the KIA_WHATSAPP account the template is attached to (1174719859057684).",
           "type": "template",
           "historyText": "Here are the offers that'd work for her 👇 Which one should I run with?",
           "fallback": {
@@ -47,7 +47,7 @@
             "options": ["💳 Low EMI", "🛡️ Insurance Off", "0️⃣ Zero Down Payment"]
           },
           "template": {
-            "name": "image_carousel_promo3",
+            "name": "image_carousel_promo4",
             "language": { "code": "en_US" },
             "components": [
               { "type": "body", "parameters": [ { "type": "text", "text": "Rahul" } ] },
@@ -58,24 +58,21 @@
                     "card_index": 0,
                     "components": [
                       { "type": "header", "parameters": [ { "type": "image", "image": { "link": "https://s7ap1.scene7.com/is/image/varunAEM/Kia-offer-lowemi?cache=off" } } ] },
-                      { "type": "button", "sub_type": "quick_reply", "index": 0, "parameters": [ { "type": "payload", "payload": "offer_insurance_off" } ] },
-                      { "type": "button", "sub_type": "quick_reply", "index": 1, "parameters": [ { "type": "payload", "payload": "offer_low_emi" } ] }
+                      { "type": "button", "sub_type": "quick_reply", "index": 0, "parameters": [ { "type": "payload", "payload": "offer_low_emi" } ] }
                     ]
                   },
                   {
                     "card_index": 1,
                     "components": [
                       { "type": "header", "parameters": [ { "type": "image", "image": { "link": "https://s7ap1.scene7.com/is/image/varunAEM/Kia-offer-insurance?cache=off" } } ] },
-                      { "type": "button", "sub_type": "quick_reply", "index": 0, "parameters": [ { "type": "payload", "payload": "offer_insurance_off" } ] },
-                      { "type": "button", "sub_type": "quick_reply", "index": 1, "parameters": [ { "type": "payload", "payload": "offer_low_emi" } ] }
+                      { "type": "button", "sub_type": "quick_reply", "index": 0, "parameters": [ { "type": "payload", "payload": "offer_insurance_off" } ] }
                     ]
                   },
                   {
                     "card_index": 2,
                     "components": [
                       { "type": "header", "parameters": [ { "type": "image", "image": { "link": "https://s7ap1.scene7.com/is/image/varunAEM/Kia-offer-zerodown?cache=off" } } ] },
-                      { "type": "button", "sub_type": "quick_reply", "index": 0, "parameters": [ { "type": "payload", "payload": "offer_insurance_off" } ] },
-                      { "type": "button", "sub_type": "quick_reply", "index": 1, "parameters": [ { "type": "payload", "payload": "offer_low_emi" } ] }
+                      { "type": "button", "sub_type": "quick_reply", "index": 0, "parameters": [ { "type": "payload", "payload": "offer_zero_down" } ] }
                     ]
                   }
                 ]
@@ -89,6 +86,7 @@
         "options": [
           { "match": "offer_low_emi", "next": "insurance_plan" },
           { "match": "offer_insurance_off", "next": "insurance_plan" },
+          { "match": "offer_zero_down", "next": "insurance_plan" },
           { "match": "Low EMI", "next": "insurance_plan" },
           { "match": "Zero Down Payment", "next": "insurance_plan" },
           { "match": "Insurance Off", "next": "insurance_plan" }
