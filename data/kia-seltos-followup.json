@@ -57,14 +57,14 @@
                   {
                     "card_index": 0,
                     "components": [
-                      { "type": "header", "parameters": [ { "type": "image", "image": { "link": "https://s7ap1.scene7.com/is/image/varunAEM/Kia-offer-lowemi?cache=off" } } ] },
+                      { "type": "header", "parameters": [ { "type": "image", "image": { "link": "https://s7ap1.scene7.com/is/image/varunAEM/Kia-offer-insurance?cache=off" } } ] },
                       { "type": "button", "sub_type": "quick_reply", "index": 0, "parameters": [ { "type": "payload", "payload": "offer_low_emi" } ] }
                     ]
                   },
                   {
                     "card_index": 1,
                     "components": [
-                      { "type": "header", "parameters": [ { "type": "image", "image": { "link": "https://s7ap1.scene7.com/is/image/varunAEM/Kia-offer-insurance?cache=off" } } ] },
+                      { "type": "header", "parameters": [ { "type": "image", "image": { "link": "https://s7ap1.scene7.com/is/image/varunAEM/Kia-offer-lowemi?cache=off" } } ] },
                       { "type": "button", "sub_type": "quick_reply", "index": 0, "parameters": [ { "type": "payload", "payload": "offer_insurance_off" } ] }
                     ]
                   },
