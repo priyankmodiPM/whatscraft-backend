@@ -136,7 +136,7 @@ function sendImage(to, link, caption, sender) {
 }
 
 // Send a pre-approved WhatsApp message template (e.g. the Kia offers carousel,
-// image_carousel_promo3). The flow JSON carries the whole template spec — name,
+// image_carousel_promo4). The flow JSON carries the whole template spec — name,
 // language, body params and carousel cards — so this helper just addresses it to the
 // recipient. Templates must be sent from the WhatsApp account they're attached to, so
 // pass that flow's sender. Quick-reply taps on the template come back as
@@ -148,7 +148,7 @@ function sendTemplate(to, template, sender) {
 // WhatsApp reply-button messages support at most 3 buttons, and an optional media
 // header — pass headerImageLink to render an image in the SAME message as the buttons
 // (a banner + its buttons arrive together). The Kia offer picker now uses the
-// image_carousel_promo3 carousel template instead — see sendTemplate.
+// image_carousel_promo4 carousel template instead — see sendTemplate.
 function sendButtons(to, bodyText, options, sender, headerImageLink) {
   const interactive = {
     type: 'button',
